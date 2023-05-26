@@ -1,0 +1,12 @@
+{
+    "name": "workspace-root",
+    "workspaces": [
+        "example_app/frontend",
+        "react-components"
+    ],
+    "private": true,
+    "devDependencies": {
+        "customize-cra": "^1.0.0",
+        "react-app-rewired": "^2.2.1"
+    }
+}

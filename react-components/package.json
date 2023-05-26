@@ -1,0 +1,11 @@
+{
+  "name": "llmtaskgraph",
+  "version": "1.0.0",
+  "description": "React components for displaying and editing llmtaskgraph task graphs.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "knexer@gmail.com",
+  "license": "MIT"
+}
