@@ -53,11 +53,54 @@ export default class SerializedGraph {
     return TaskState.READY;
   }
 
-  // Invalidates the output of the task with the given id.
-  invalidateTask(task_id) {
-    const task = this.getTask(task_id);
-    task.output_data = null;
+  onTaskUpdated(task_id) {
+    // Scan in topological order for tasks invalidated by this update.
+    const allTasks = this.allTasks();
+    const updated = new Set([task_id]);
+    const toDelete = new Set();
+    for (const task of allTasks) {
+      // If any of the task's dependencies were updated, invalidate the task.
+      if (
+        task.deps.some((dep) => updated.has(dep)) ||
+        Object.values(task.kwdeps).some((dep) => updated.has(dep))
+      ) {
+        task.output_data = null;
+        updated.add(task.task_id);
+      }
+      // If the task was created by an invalidated task, delete it.
+      if (
+        task.created_by !== null &&
+        updated.has(task.created_by) &&
+        this.getTaskState(task.created_by) !== TaskState.COMPLETE
+      ) {
+        updated.add(task.task_id);
+        toDelete.add(task.task_id);
+      }
+    }
 
-    // TODO: Invalidate the output of all tasks that depend on this task, directly or transitively.
+    for (task_id of toDelete) {
+      this.deleteTask(task_id);
+    }
+  }
+
+  deleteTask(task_id) {
+    // Find the subgraph that contains the task.
+    // Delete the task from the subgraph.
+    const all_tasks = this.allTasks();
+    const parent_task = all_tasks.find(
+      (task) =>
+        task.type === "TaskGraphTask" &&
+        task.subgraph.tasks.some((t) => t.task_id === task_id)
+    );
+
+    if (parent_task) {
+      parent_task.subgraph.tasks = parent_task.subgraph.tasks.filter(
+        (t) => t.task_id !== task_id
+      );
+    } else {
+      this.serialized_graph.tasks = this.serialized_graph.tasks.filter(
+        (t) => t.task_id !== task_id
+      );
+    }
   }
 }

@@ -43,6 +43,7 @@ export default function App() {
 
     // Update the output_data
     task.output_data = output_data;
+    new_graph.onTaskUpdated(task_id);
 
     // Update the state
     setSerializedGraph(new_graph);
