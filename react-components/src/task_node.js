@@ -61,7 +61,18 @@ export function TaskNode({ data }) {
         type="target"
         position={isHorizontal ? Position.Left : Position.Top}
       />
-      <div className={"task-node__" + task_state + " react-flow__node-default"}>
+      <div
+        className={"task-node__" + task_state + " react-flow__node-default"}
+        style={
+          task.type === "TaskGraphTask"
+            ? {
+                width: data.width,
+                height: data.height,
+                backgroundColor: "transparent",
+              }
+            : null
+        }
+      >
         {TaskSummary(task, task_state)}
       </div>
       <Handle

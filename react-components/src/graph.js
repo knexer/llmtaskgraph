@@ -15,6 +15,18 @@ function makeNode(graph, task, direction, parentId) {
   };
 }
 
+function makeNodes(graph, task, direction, parentId = null) {
+  const node = makeNode(graph, task, direction, parentId);
+  if (task.type === "TaskGraphTask") {
+    return [node].concat(
+      task.subgraph.tasks.flatMap((subgraphTask) =>
+        makeNodes(graph, subgraphTask, direction, node.id)
+      )
+    );
+  }
+  return [node];
+}
+
 function makeEdge(task, dep_task_id, tasks, sourceHandle = "output") {
   const dep_task = tasks.find((t) => t.task_id === dep_task_id);
   const edge = {
@@ -52,8 +64,8 @@ export default function Graph({ serialized_graph, select_task_id }) {
     const direction = "TB"; // TB or LR
 
     const all_tasks = serialized_graph.allTasks();
-    const initialNodes = all_tasks.map((task) =>
-      makeNode(serialized_graph, task, direction)
+    const initialNodes = serialized_graph.serialized_graph.tasks.flatMap(
+      (task) => makeNodes(serialized_graph, task, direction)
     );
     const initialEdges = all_tasks.flatMap((task) =>
       makeEdges(task, all_tasks)
