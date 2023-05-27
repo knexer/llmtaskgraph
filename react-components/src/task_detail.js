@@ -39,6 +39,7 @@ export default function TaskDetail({ graph, task_id, onEdit }) {
       <div>{task.task_id}</div>
       {type === "LLMTask" ? <LLMTaskDetail task={task} /> : null}
       {type === "PythonTask" ? <PythonTaskDetail task={task} /> : null}
+      {type === "TaskGraphTask" ? <TaskGraphTaskDetail task={task} /> : null}
       <div>
         {editing ? (
           <>
@@ -74,6 +75,15 @@ export function PythonTaskDetail({ task }) {
   return (
     <>
       <div>{task.callback_id}</div>
+    </>
+  );
+}
+
+export function TaskGraphTaskDetail({ task }) {
+  return (
+    <>
+      <div>{task.input_formatter_id}</div>
+      <div>{JSON.stringify(task.subgraph.graph_input)}</div>
     </>
   );
 }
