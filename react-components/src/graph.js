@@ -1,34 +1,18 @@
-import React, {useEffect} from "react";
-import ReactFlow, {
-  MiniMap,
-  Controls,
-  Background,
-} from "reactflow";
+import React, { useEffect } from "react";
+import ReactFlow, { MiniMap, Controls, Background } from "reactflow";
 import elkLayout from "./graph_layout";
 
 import { TaskNode } from "./task_node";
 
 import "reactflow/dist/style.css";
 
-function allTasks(graph) {
-  return graph.tasks.flatMap((task) => [task].concat(task.type === "TaskGraphTask" ? allTasks(task.subgraph) : []));
-}
-
-function makeNode(task, direction, parentId) {
+function makeNode(graph, task, direction, parentId) {
   return {
     id: task.task_id,
     parentNode: parentId,
     type: "Task",
-    data: { task: task, direction: direction },
+    data: { graph: graph, task: task, direction: direction },
   };
-}
-
-function makeNodes(task, direction, parentId = null) {
-  const node = makeNode(task, direction, parentId);
-  if (task.type === "TaskGraphTask") {
-    return [node].concat(task.subgraph.tasks.flatMap((subgraphTask) => makeNodes(subgraphTask, direction, node.id)));
-  }
-  return [node];
 }
 
 function makeEdge(task, dep_task_id, tasks, sourceHandle = "output") {
@@ -43,9 +27,7 @@ function makeEdge(task, dep_task_id, tasks, sourceHandle = "output") {
 }
 
 function makeEdges(task, tasks) {
-  const deps = task.deps.map((dep) =>
-    makeEdge(task, dep, tasks)
-  );
+  const deps = task.deps.map((dep) => makeEdge(task, dep, tasks));
   const kwdeps = Object.values(task.kwdeps).map((dep) =>
     makeEdge(task, dep, tasks)
   );
@@ -56,7 +38,7 @@ function makeEdges(task, tasks) {
 }
 
 const nodeTypes = {
-  "Task": TaskNode,
+  Task: TaskNode,
 };
 
 export default function Graph({ serialized_graph, select_task_id }) {
@@ -69,9 +51,9 @@ export default function Graph({ serialized_graph, select_task_id }) {
   useEffect(() => {
     const direction = "TB"; // TB or LR
 
-    const all_tasks = allTasks(serialized_graph);
-    const initialNodes = serialized_graph.tasks.flatMap((task) =>
-      makeNodes(task, direction)
+    const all_tasks = serialized_graph.allTasks();
+    const initialNodes = all_tasks.map((task) =>
+      makeNode(serialized_graph, task, direction)
     );
     const initialEdges = all_tasks.flatMap((task) =>
       makeEdges(task, all_tasks)
@@ -85,7 +67,7 @@ export default function Graph({ serialized_graph, select_task_id }) {
 
   if (!graph) {
     return <div>Loading...</div>;
-  };
+  }
 
   const onNodeClick = (_, node) => {
     // Possibly also somehow highlight the selected node?

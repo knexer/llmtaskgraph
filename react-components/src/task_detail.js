@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 export default function TaskDetail({ graph, task_id, onEdit }) {
   const [editing, setEditing] = useState(false);
   const [newOutputData, setNewOutputData] = useState(null);
 
   if (task_id === null) {
-    return (<div className="task-detail">
-      <div>Task Detail</div>
-      No task selected
-    </div>);
+    return (
+      <div className="task-detail">
+        <div>Task Detail</div>
+        No task selected
+      </div>
+    );
   }
 
-  const allTasks = (graph) => graph.tasks.flatMap((task) => [task].concat(task.type === "TaskGraphTask" ? allTasks(task.subgraph) : []));
-
-  const task = allTasks(graph).find((task) => task.task_id === task_id);
+  const task = graph.getTask(task_id);
 
   const handleEdit = () => {
     setNewOutputData(JSON.stringify(task.output_data));
@@ -21,7 +21,6 @@ export default function TaskDetail({ graph, task_id, onEdit }) {
   };
 
   const handleSave = () => {
-    console.log(newOutputData);
     onEdit(task.task_id, JSON.parse(newOutputData));
     setEditing(false);
   };
@@ -38,16 +37,15 @@ export default function TaskDetail({ graph, task_id, onEdit }) {
       <div>{type}</div>
       <div>State: {task.output_data === null ? "Incomplete" : "Complete"}</div>
       <div>{task.task_id}</div>
-      {type === "LLMTask" ? (
-        <LLMTaskDetail task={task} />
-      ) : null}
-      {type === "PythonTask" ? (
-        <PythonTaskDetail task={task} />
-      ) : null}
+      {type === "LLMTask" ? <LLMTaskDetail task={task} /> : null}
+      {type === "PythonTask" ? <PythonTaskDetail task={task} /> : null}
       <div>
         {editing ? (
           <>
-            <textarea value={newOutputData} onChange={(e) => setNewOutputData(e.target.value)}/>
+            <textarea
+              value={newOutputData}
+              onChange={(e) => setNewOutputData(e.target.value)}
+            />
             <button onClick={handleSave}>Save</button>
             <button onClick={handleDelete}>Delete Output</button>
           </>

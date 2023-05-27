@@ -1,7 +1,7 @@
 import { Handle, Position } from "reactflow";
 import "reactflow/dist/style.css";
 
-function LLMTaskSummary( task ) {
+function LLMTaskSummary(task) {
   return (
     <>
       <div>LLMTask</div>
@@ -11,8 +11,7 @@ function LLMTaskSummary( task ) {
   );
 }
 
-
-function PythonTaskSummary( task ) {
+function PythonTaskSummary(task) {
   return (
     <>
       <div>PythonTask</div>
@@ -21,7 +20,7 @@ function PythonTaskSummary( task ) {
   );
 }
 
-function TaskGraphTaskSummary( task ) {
+function TaskGraphTaskSummary(task) {
   return (
     <>
       <div>TaskGraphTask</div>
@@ -30,7 +29,7 @@ function TaskGraphTaskSummary( task ) {
   );
 }
 
-function TaskSummary(task){
+function TaskSummary(task) {
   switch (task.type) {
     case "LLMTask":
       return LLMTaskSummary(task);
@@ -40,12 +39,12 @@ function TaskSummary(task){
       return TaskGraphTaskSummary(task);
     default:
       return <div>Unknown task type: {task.type}</div>;
-  };
-
+  }
 }
 
-export function TaskNode({data}) {
+export function TaskNode({ data }) {
   const task = data.task;
+  const graph = data.graph;
   const direction = data.direction;
   const isHorizontal = direction === "LR";
   const handleStyle = isHorizontal ? { top: 10 } : { left: 10 };
@@ -56,7 +55,18 @@ export function TaskNode({data}) {
         type="target"
         position={isHorizontal ? Position.Left : Position.Top}
       />
-      <div className="react-flow__node-default custom-node" style={task.type === "TaskGraphTask" ? {width: data.width, height: data.height, backgroundColor: "transparent"} : null}>
+      <div
+        className="react-flow__node-default custom-node"
+        style={
+          task.type === "TaskGraphTask"
+            ? {
+                width: data.width,
+                height: data.height,
+                backgroundColor: "transparent",
+              }
+            : null
+        }
+      >
         {TaskSummary(task)}
       </div>
       <Handle
