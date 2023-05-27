@@ -70,12 +70,8 @@ export default class SerializedGraph {
         task.deps.some((dep) => updated.has(dep)) ||
         Object.values(task.kwdeps).some((dep) => updated.has(dep))
       ) {
-        task.output_data = null;
+        this.invalidateTask(task);
         updated.add(task.task_id);
-        // Recursively invalidate the contents of the subgraph.
-        if (task.type === "TaskGraphTask") {
-          this.invalidateSubgraph(task.subgraph);
-        }
       } else if (task.type === "TaskGraphTask") {
         // Otherwise, if the task is a subgraph, it may contain task_id.
         if (this.onTaskUpdatedInSubgraph(task_id, task.subgraph)) {
@@ -105,10 +101,19 @@ export default class SerializedGraph {
 
   invalidateSubgraph(subgraph) {
     for (const task of subgraph.tasks) {
-      task.output_data = null;
-      if (task.type === "TaskGraphTask") {
-        this.invalidateSubgraph(task.subgraph);
-      }
+      this.invalidateTask(task);
+    }
+  }
+
+  invalidateTask(task) {
+    task.output_data = null;
+    if (task.type === "TaskGraphTask") {
+      console.log("Invalidating subgraph");
+      this.invalidateSubgraph(task.subgraph);
+    } else if (task.type === "LLMTask") {
+      console.log("Invalidating LLM task");
+      task.formatted_prompt = null;
+      task.response = null;
     }
   }
 

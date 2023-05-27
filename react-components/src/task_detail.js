@@ -65,7 +65,9 @@ export function LLMTaskDetail({ task }) {
   return (
     <>
       <div>{task.prompt_formatter_id}</div>
+      <div>{JSON.stringify(task.formatted_prompt)}</div>
       <div>{JSON.stringify(task.params)}</div>
+      <div>{JSON.stringify(task.response)}</div>
       <div>{task.output_parser_id}</div>
     </>
   );

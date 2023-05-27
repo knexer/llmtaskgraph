@@ -54,9 +54,9 @@ class Task(ABC):
             return
 
         # Collect dependncy output. We know tasks are actual Tasks with output futures at this point.
-        dep_results: list[Any] = [await dep.output for dep in self.deps] #type: ignore
+        dep_results: list[Any] = [await dep.output for dep in self.deps]  # type: ignore
         kwdep_results = {
-            kwdep_name: await kwdep.output for kwdep_name, kwdep in self.kwdeps.items() #type: ignore
+            kwdep_name: await kwdep.output for kwdep_name, kwdep in self.kwdeps.items()  # type: ignore
         }
 
         # Execute task.
@@ -127,12 +127,14 @@ class LLMTask(Task):
         params: Any,
         output_parser_id: str,
         *deps: Union[Task, str],
-        **kwdeps: Union[Task, str]
+        **kwdeps: Union[Task, str],
     ):
         super().__init__(*deps, **kwdeps)
         self.prompt_formatter_id = prompt_formatter_id
         self.params = params
         self.output_parser_id = output_parser_id
+        self.formatted_prompt = None
+        self.response = None
 
     async def execute(
         self,
@@ -141,12 +143,14 @@ class LLMTask(Task):
         *dep_results: tuple[Any],
         **kwdep_results: dict[str, Any],
     ):
-        formatted_prompt = function_registry[self.prompt_formatter_id](
-            context, *dep_results, **kwdep_results
-        )
-        response = await self.api_call(formatted_prompt)
+        if self.formatted_prompt is None:
+            self.formatted_prompt = function_registry[self.prompt_formatter_id](
+                context, *dep_results, **kwdep_results
+            )
+        if self.response is None:
+            self.response = await self.api_call(self.formatted_prompt)
         # Todo: retry api call and parsing if output is None
-        return function_registry[self.output_parser_id](context, response)
+        return function_registry[self.output_parser_id](context, self.response)
 
     async def api_call(self, messages):
         # make sure messages is a list of objects with role and content keys
@@ -170,6 +174,8 @@ class LLMTask(Task):
                 "prompt_formatter_id": self.prompt_formatter_id,
                 "params": self.params,
                 "output_parser_id": self.output_parser_id,
+                "formatted_prompt": self.formatted_prompt,
+                "response": self.response,
             }
         )
         return json
@@ -182,6 +188,8 @@ class LLMTask(Task):
             json.pop("output_parser_id"),
         )
         task.init_from_json(json)
+        task.formatted_prompt = json.pop("formatted_prompt")
+        task.response = json.pop("response")
         return task
 
 
@@ -229,7 +237,7 @@ class TaskGraphTask(Task):
         subgraph: "TaskGraph",
         input_formatter_id: str,
         *deps: Union[Task, str],
-        **kwdeps: Union[Task, str]
+        **kwdeps: Union[Task, str],
     ):
         super().__init__(*deps, **kwdeps)
         self.subgraph = subgraph
@@ -261,7 +269,10 @@ class TaskGraphTask(Task):
 
     @classmethod
     def from_json(cls, json: dict[str, Any]) -> TaskGraphTask:
-        from llmtaskgraph.task_graph import TaskGraph  # Import here to avoid circular dependency
+        from llmtaskgraph.task_graph import (
+            TaskGraph,
+        )  # Import here to avoid circular dependency
+
         task = cls(
             TaskGraph.from_json(json.pop("subgraph")),
             json.pop("input_formatter_id"),
