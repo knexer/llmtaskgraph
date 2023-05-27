@@ -54,11 +54,17 @@ export default class SerializedGraph {
   }
 
   onTaskUpdated(task_id) {
-    // Scan in topological order for tasks invalidated by this update.
-    const allTasks = this.allTasks();
+    this.onTaskUpdatedInSubgraph(task_id, this.serialized_graph);
+  }
+
+  // Searches the given subgraph for task_id, and invalidates tasks that depend
+  // on it. Returns true if subgraph's output_data was invalidated.
+  onTaskUpdatedInSubgraph(task_id, subgraph) {
+    // Scan subgraph in topological order for tasks invalidated by this update.
+    // Recurse into subgraphs as we go, searching for task_id.
     const updated = new Set([task_id]);
     const toDelete = new Set();
-    for (const task of allTasks) {
+    for (const task of subgraph.tasks) {
       // If any of the task's dependencies were updated, invalidate the task.
       if (
         task.deps.some((dep) => updated.has(dep)) ||
@@ -66,6 +72,16 @@ export default class SerializedGraph {
       ) {
         task.output_data = null;
         updated.add(task.task_id);
+        // Recursively invalidate the contents of the subgraph.
+        if (task.type === "TaskGraphTask") {
+          this.invalidateSubgraph(task.subgraph);
+        }
+      } else if (task.type === "TaskGraphTask") {
+        // Otherwise, if the task is a subgraph, it may contain task_id.
+        if (this.onTaskUpdatedInSubgraph(task_id, task.subgraph)) {
+          task.output_data = null;
+          updated.add(task.task_id);
+        }
       }
       // If the task was created by an invalidated task, delete it.
       if (
@@ -80,6 +96,19 @@ export default class SerializedGraph {
 
     for (task_id of toDelete) {
       this.deleteTask(task_id);
+    }
+
+    // If task_id was in the subgraph (directly or transitively), output_task would have been invalidated.
+    // In this case, return true to indicate that the subgraph was invalidated.
+    return updated.has(subgraph.output_task);
+  }
+
+  invalidateSubgraph(subgraph) {
+    for (const task of subgraph.tasks) {
+      task.output_data = null;
+      if (task.type === "TaskGraphTask") {
+        this.invalidateSubgraph(task.subgraph);
+      }
     }
   }
 
