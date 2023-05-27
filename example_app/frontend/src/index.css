@@ -12,12 +12,6 @@ code {
     monospace;
 }
 
-.custom-node {
-  border-radius: 10px;
-  padding: 15px;
-  white-space: nowrap;
-}
-
 .graph-and-detail {
   display: flex;
   flex-direction: column;

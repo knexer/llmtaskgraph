@@ -35,7 +35,7 @@ export default function TaskDetail({ graph, task_id, onEdit }) {
     <div className="task-detail">
       <div>Task Detail</div>
       <div>{type}</div>
-      <div>State: {task.output_data === null ? "Incomplete" : "Complete"}</div>
+      <div>State: {graph.getTaskState(task.task_id)}</div>
       <div>{task.task_id}</div>
       {type === "LLMTask" ? <LLMTaskDetail task={task} /> : null}
       {type === "PythonTask" ? <PythonTaskDetail task={task} /> : null}

@@ -1,3 +1,9 @@
+export const TaskState = {
+  COMPLETE: "complete",
+  READY: "ready",
+  WAITING: "waiting",
+};
+
 export default class SerializedGraph {
   constructor(serialized_graph) {
     this.serialized_graph = serialized_graph;
@@ -35,10 +41,22 @@ export default class SerializedGraph {
     return deps.concat(kwdeps).concat(created_by);
   }
 
+  getTaskState(task_id) {
+    const task = this.getTask(task_id);
+    if (task.output_data !== null) {
+      return TaskState.COMPLETE;
+    }
+    const deps = this.getDependencies(task_id);
+    if (deps.some((dep) => dep.output_data === null)) {
+      return TaskState.WAITING;
+    }
+    return TaskState.READY;
+  }
+
   // Invalidates the output of the task with the given id.
   invalidateTask(task_id) {
     const task = this.getTask(task_id);
-    task.output = null;
+    task.output_data = null;
 
     // TODO: Invalidate the output of all tasks that depend on this task, directly or transitively.
   }
