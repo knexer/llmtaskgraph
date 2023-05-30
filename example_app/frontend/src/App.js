@@ -39,7 +39,10 @@ export default function App() {
 
     // Find the task
     const task = new_graph.getTask(task_id);
-    if (!task) return;
+    if (!task) {
+      console.log(`Task ${task_id} not found`);
+      return;
+    }
 
     // Update the output_data
     task.output_data = output_data;

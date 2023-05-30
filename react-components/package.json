@@ -13,6 +13,7 @@
     "react-dom": "^18.2.0"
   },
   "dependencies": {
-    "elkjs": "^0.8.2"
+    "elkjs": "^0.8.2",
+    "jsoneditor": "^9.10.2"
   }
 }
