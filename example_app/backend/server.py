@@ -31,18 +31,17 @@ class WebSocketServer:
         graph_exec = asyncio.create_task(
             self.task_graph.run(self.function_registry, self.graph_input)
         )
-
-        # Let tasks start so we have something to wait for below.
-        await asyncio.sleep(0)
         print("Task graph started.")
 
         # Send updates once per second
         while not graph_exec.done():
             await asyncio.sleep(1)
             # Serialize the current task graph and send it to the client
-            print("Sending task graph update.")
             await self.send_graph(websocket)
             print("Task graph update sent.")
+
+        if graph_exec.exception() is not None:
+            print("Task graph failed.")
 
         # Serialize the final task graph and send it to the client
         print("Sending final task graph.")

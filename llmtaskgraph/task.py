@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from asyncio import Future
 import asyncio
 import inspect
+import traceback
 from typing import Any, Optional
 from uuid import uuid4
 import openai
@@ -51,11 +52,15 @@ class Task(ABC):
         if self.output_data is not None:
             return self.output_data
 
-        # Collect dependncy output. We know tasks are actual Tasks with output futures at this point.
-        dep_results: list[Any] = [await dep.output for dep in self.deps]  # type: ignore
-        kwdep_results = {
-            kwdep_name: await kwdep.output for kwdep_name, kwdep in self.kwdeps.items()  # type: ignore
-        }
+        # Collect dependency output. We know tasks are actual Tasks with output futures at this point.
+        try:
+            dep_results: list[Any] = [await dep.output for dep in self.deps]  # type: ignore
+            kwdep_results = {
+                kwdep_name: await kwdep.output for kwdep_name, kwdep in self.kwdeps.items()  # type: ignore
+            }
+        except Exception as e:
+            # If any dependency failed, silently abort. The exception will be handled by the TaskGraph.
+            return None
 
         # Execute task.
         context: GraphContext = graph.make_context_for(self)
@@ -82,6 +87,16 @@ class Task(ABC):
             else:
                 return dep
 
+        def get_exception_str(future: Future) -> Optional[str]:
+            if future is not None and future.done() and future.exception() is not None:
+                return "".join(
+                    traceback.TracebackException.from_exception(
+                        future.exception()
+                    ).format()
+                )
+            else:
+                return None
+
         return {
             "type": self.__class__.__name__,
             "task_id": self.task_id,
@@ -90,6 +105,7 @@ class Task(ABC):
             "created_by": get_id(self.created_by) if self.created_by else None,
             # TODO may need to do something fancier at some point to handle custom types in output_data
             "output_data": self.output_data,
+            "error": get_exception_str(self.output),
         }
 
     @classmethod

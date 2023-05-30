@@ -1,5 +1,6 @@
 export const TaskState = {
   COMPLETE: "complete",
+  ERROR: "error",
   READY: "ready",
   WAITING: "waiting",
 };
@@ -45,6 +46,9 @@ export default class SerializedGraph {
     const task = this.getTask(task_id);
     if (task.output_data !== null) {
       return TaskState.COMPLETE;
+    }
+    if (task.error !== null) {
+      return TaskState.ERROR;
     }
     const deps = this.getDependencies(task_id);
     if (deps.some((dep) => dep.output_data === null)) {

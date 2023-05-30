@@ -51,16 +51,15 @@ class TaskGraph:
             for task in self.tasks
         ):
             # wait for every started task to be done
-            await asyncio.wait(
-                [task.output for task in self.tasks if task.output is not None]
-            )
+            await asyncio.wait([task.output for task in self.tasks])
 
         # If any task has an exception, raise it.
         for task in self.tasks:
             if task.output.done() and task.output.exception() is not None:
-                # TODO: Also cancel all other tasks?
-                # TODO: What if multiple tasks have exceptions?
-                raise task.output.exception()
+                for task in self.tasks:
+                    task.output.cancel()
+
+                raise Exception("Subtask failed.") from task.output.exception()
 
         self.started = False
         self.function_registry = None
@@ -107,8 +106,3 @@ class GraphContext:
     def add_output_task(self, new_task: Task):
         new_task.hydrate_deps(self.graph.tasks, self.task)
         return self.graph.add_output_task(new_task)
-
-
-# Todo:
-# - Exception handling during run.
-# - Cancelling a run?
