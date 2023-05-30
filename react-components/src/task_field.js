@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from "react";
 import JSONEditor from "jsoneditor";
 import "jsoneditor/dist/jsoneditor.css";
 
-export default function TaskField({ task, fieldName, onEdit }) {
+export default function TaskField({ task, fieldName, computedBy, onEdit }) {
   const containerRef = useRef(null);
   const jsoneditor = useRef(null);
 
@@ -51,6 +51,9 @@ export default function TaskField({ task, fieldName, onEdit }) {
 
   return (
     <div>
+      <div>
+        {fieldName} (computed by {computedBy})
+      </div>
       <div className="jsoneditor-react-container" ref={containerRef} />
       <button onClick={handleSave}>Save</button>
       <button onClick={handleDelete}>Clear</button>

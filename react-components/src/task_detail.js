@@ -17,19 +17,19 @@ export default function TaskDetail({ graph, task_id, onEdit }) {
   const type = task.type;
   return (
     <div className="task-detail">
-      <div>Task Detail</div>
-      <div>{type}</div>
+      <div>Task Detail ({type})</div>
       <div>State: {graph.getTaskState(task.task_id)}</div>
       {task.error !== null ? <div>Error: {task.error}</div> : null}
-      <div>{task.task_id}</div>
+      <div>Task ID: {task.task_id}</div>
       {type === "LLMTask" ? (
         <LLMTaskDetail task={task} onEdit={onEdit} />
       ) : null}
-      {type === "PythonTask" ? <PythonTaskDetail task={task} /> : null}
+      {type === "PythonTask" ? (
+        <PythonTaskDetail task={task} onEdit={onEdit} />
+      ) : null}
       {type === "TaskGraphTask" ? (
         <TaskGraphTaskDetail task={task} onEdit={onEdit} />
       ) : null}
-      <TaskField task={task} fieldName="output_data" onEdit={onEdit} />
     </div>
   );
 }
@@ -37,19 +37,37 @@ export default function TaskDetail({ graph, task_id, onEdit }) {
 export function LLMTaskDetail({ task, onEdit }) {
   return (
     <>
-      <div>{task.prompt_formatter_id}</div>
-      <TaskField task={task} fieldName="formatted_prompt" onEdit={onEdit} />
-      <div>{JSON.stringify(task.params)}</div>
-      <TaskField task={task} fieldName="response" onEdit={onEdit} />
-      <div>{task.output_parser_id}</div>
+      <TaskField
+        task={task}
+        fieldName="formatted_prompt"
+        computedBy={task.prompt_formatter_id}
+        onEdit={onEdit}
+      />
+      <TaskField
+        task={task}
+        fieldName="response"
+        computedBy={"LLM with params " + JSON.stringify(task.params)}
+        onEdit={onEdit}
+      />
+      <TaskField
+        task={task}
+        fieldName="output_data"
+        computedBy={task.output_parser_id}
+        onEdit={onEdit}
+      />
     </>
   );
 }
 
-export function PythonTaskDetail({ task }) {
+export function PythonTaskDetail({ task, onEdit }) {
   return (
     <>
-      <div>{task.callback_id}</div>
+      <TaskField
+        task={task}
+        fieldName="output_data"
+        computedBy={task.callback_id}
+        onEdit={onEdit}
+      />
     </>
   );
 }
@@ -57,8 +75,18 @@ export function PythonTaskDetail({ task }) {
 export function TaskGraphTaskDetail({ task, onEdit }) {
   return (
     <>
-      <div>{task.input_formatter_id}</div>
-      <TaskField task={task} fieldName="graph_input" onEdit={onEdit} />
+      <TaskField
+        task={task}
+        fieldName="graph_input"
+        computedBy={task.input_formatter_id}
+        onEdit={onEdit}
+      />
+      <TaskField
+        task={task}
+        fieldName="output_data"
+        computedBy={"output task " + task.subgraph.output_task}
+        onEdit={onEdit}
+      />
     </>
   );
 }
