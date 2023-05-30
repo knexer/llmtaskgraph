@@ -33,7 +33,7 @@ export default function App() {
     return () => ws.close();
   }, []);
 
-  const handleEdit = (task_id, fieldName, output_data) => {
+  const handleEdit = (task_id, fieldName, fieldData) => {
     // Deep copy the serialized graph
     const new_graph = serialized_graph.copy();
 
@@ -44,9 +44,9 @@ export default function App() {
       return;
     }
 
-    // Update the output_data
-    task.output_data = output_data;
-    new_graph.onTaskUpdated(task_id);
+    // Update the field
+    task[fieldName] = fieldData;
+    new_graph.onTaskUpdated(task_id, fieldName);
 
     // Update the state
     setSerializedGraph(new_graph);

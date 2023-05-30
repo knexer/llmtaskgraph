@@ -22,21 +22,25 @@ export default function TaskDetail({ graph, task_id, onEdit }) {
       <div>State: {graph.getTaskState(task.task_id)}</div>
       {task.error !== null ? <div>Error: {task.error}</div> : null}
       <div>{task.task_id}</div>
-      {type === "LLMTask" ? <LLMTaskDetail task={task} /> : null}
+      {type === "LLMTask" ? (
+        <LLMTaskDetail task={task} onEdit={onEdit} />
+      ) : null}
       {type === "PythonTask" ? <PythonTaskDetail task={task} /> : null}
-      {type === "TaskGraphTask" ? <TaskGraphTaskDetail task={task} /> : null}
+      {type === "TaskGraphTask" ? (
+        <TaskGraphTaskDetail task={task} onEdit={onEdit} />
+      ) : null}
       <TaskField task={task} fieldName="output_data" onEdit={onEdit} />
     </div>
   );
 }
 
-export function LLMTaskDetail({ task }) {
+export function LLMTaskDetail({ task, onEdit }) {
   return (
     <>
       <div>{task.prompt_formatter_id}</div>
-      <div>{JSON.stringify(task.formatted_prompt)}</div>
+      <TaskField task={task} fieldName="formatted_prompt" onEdit={onEdit} />
       <div>{JSON.stringify(task.params)}</div>
-      <div>{JSON.stringify(task.response)}</div>
+      <TaskField task={task} fieldName="response" onEdit={onEdit} />
       <div>{task.output_parser_id}</div>
     </>
   );
@@ -50,11 +54,11 @@ export function PythonTaskDetail({ task }) {
   );
 }
 
-export function TaskGraphTaskDetail({ task }) {
+export function TaskGraphTaskDetail({ task, onEdit }) {
   return (
     <>
       <div>{task.input_formatter_id}</div>
-      <div>{JSON.stringify(task.subgraph.graph_input)}</div>
+      <TaskField task={task} fieldName="graph_input" onEdit={onEdit} />
     </>
   );
 }

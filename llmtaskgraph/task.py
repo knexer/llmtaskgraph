@@ -252,6 +252,7 @@ class TaskGraphTask(Task):
         super().__init__(*deps, **kwdeps)
         self.subgraph = subgraph
         self.input_formatter_id = input_formatter_id
+        self.graph_input = None
 
     async def execute(
         self,
@@ -260,11 +261,14 @@ class TaskGraphTask(Task):
         *dep_results: tuple[Any],
         **kwdep_results: dict[str, Any],
     ):
+        if self.graph_input is None:
+            self.graph_input = function_registry[self.input_formatter_id](
+                context, *dep_results, **kwdep_results
+            )
+
         return await self.subgraph.run(
             function_registry,
-            function_registry[self.input_formatter_id](
-                context, *dep_results, **kwdep_results
-            ),
+            self.graph_input,
         )
 
     def to_json(self):
@@ -273,6 +277,7 @@ class TaskGraphTask(Task):
             {
                 "subgraph": self.subgraph.to_json(),
                 "input_formatter_id": self.input_formatter_id,
+                "graph_input": self.graph_input,
             }
         )
         return json
@@ -288,4 +293,5 @@ class TaskGraphTask(Task):
             json.pop("input_formatter_id"),
         )
         task.init_from_json(json)
+        task.graph_input = json.pop("graph_input")
         return task

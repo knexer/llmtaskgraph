@@ -57,7 +57,34 @@ export default class SerializedGraph {
     return TaskState.READY;
   }
 
-  onTaskUpdated(task_id) {
+  onTaskUpdated(task_id, fieldName) {
+    // First, update the other task fields to ensure the task is internally consistent.
+    const task = this.getTask(task_id);
+    if (task.type === "TaskGraphTask") {
+      if (fieldName === "graph_input") {
+        this.invalidateSubgraph(task.subgraph);
+        task.output_data = null;
+      } else if (fieldName !== "output_data") {
+        throw new Error("Cannot modify TaskGraphTask field " + fieldName);
+      }
+    } else if (task.type === "LLMTask") {
+      if (fieldName === "formatted_prompt") {
+        task.output_data = null;
+        task.error = null;
+        task.response = null;
+      } else if (fieldName === "response") {
+        task.output_data = null;
+        task.error = null;
+      } else if (fieldName !== "output_data") {
+        throw new Error("Cannot modify LLMTask field " + fieldName);
+      }
+    } else if (task.type === "PythonTask") {
+      if (fieldName !== "output_data") {
+        throw new Error("Cannot modify PythonTask field " + fieldName);
+      }
+      task.error = null;
+    }
+
     this.onTaskUpdatedInSubgraph(task_id, this.serialized_graph);
   }
 
@@ -112,10 +139,9 @@ export default class SerializedGraph {
   invalidateTask(task) {
     task.output_data = null;
     if (task.type === "TaskGraphTask") {
-      console.log("Invalidating subgraph");
+      task.graph_input = null;
       this.invalidateSubgraph(task.subgraph);
     } else if (task.type === "LLMTask") {
-      console.log("Invalidating LLM task");
       task.formatted_prompt = null;
       task.response = null;
     }
