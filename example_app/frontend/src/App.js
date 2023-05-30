@@ -33,7 +33,7 @@ export default function App() {
     return () => ws.close();
   }, []);
 
-  const handleEdit = (task_id, output_data) => {
+  const handleEdit = (task_id, fieldName, output_data) => {
     // Deep copy the serialized graph
     const new_graph = serialized_graph.copy();
 

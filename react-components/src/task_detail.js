@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
+
+import TaskField from "./task_field";
 
 export default function TaskDetail({ graph, task_id, onEdit }) {
-  const [editing, setEditing] = useState(false);
-  const [newOutputData, setNewOutputData] = useState(null);
-
   if (task_id === null) {
     return (
       <div className="task-detail">
@@ -14,21 +13,6 @@ export default function TaskDetail({ graph, task_id, onEdit }) {
   }
 
   const task = graph.getTask(task_id);
-
-  const handleEdit = () => {
-    setNewOutputData(JSON.stringify(task.output_data));
-    setEditing(true);
-  };
-
-  const handleSave = () => {
-    onEdit(task.task_id, JSON.parse(newOutputData));
-    setEditing(false);
-  };
-
-  const handleDelete = () => {
-    onEdit(task.task_id, null);
-    setEditing(false);
-  };
 
   const type = task.type;
   return (
@@ -41,23 +25,7 @@ export default function TaskDetail({ graph, task_id, onEdit }) {
       {type === "LLMTask" ? <LLMTaskDetail task={task} /> : null}
       {type === "PythonTask" ? <PythonTaskDetail task={task} /> : null}
       {type === "TaskGraphTask" ? <TaskGraphTaskDetail task={task} /> : null}
-      <div>
-        {editing ? (
-          <>
-            <textarea
-              value={newOutputData}
-              onChange={(e) => setNewOutputData(e.target.value)}
-            />
-            <button onClick={handleSave}>Save</button>
-            <button onClick={handleDelete}>Delete Output</button>
-          </>
-        ) : (
-          <>
-            <div>{JSON.stringify(task.output_data)}</div>
-            <button onClick={handleEdit}>Edit Output</button>
-          </>
-        )}
-      </div>
+      <TaskField task={task} fieldName="output_data" onEdit={onEdit} />
     </div>
   );
 }
