@@ -4,6 +4,7 @@ import json
 
 from llmtaskgraph.task_graph import TaskGraph
 
+
 class WebSocketServer:
     def __init__(self, initial_task_graph, function_registry, graph_input):
         self.task_graph = initial_task_graph
@@ -27,14 +28,16 @@ class WebSocketServer:
 
     async def execute_current_graph(self, websocket):
         # Start the current task graph
-        asyncio.create_task(self.task_graph.run(self.function_registry, self.graph_input))
+        graph_exec = asyncio.create_task(
+            self.task_graph.run(self.function_registry, self.graph_input)
+        )
 
         # Let tasks start so we have something to wait for below.
         await asyncio.sleep(0)
         print("Task graph started.")
 
         # Send updates once per second
-        while self.task_graph.started:
+        while not graph_exec.done():
             await asyncio.sleep(1)
             # Serialize the current task graph and send it to the client
             print("Sending task graph update.")
@@ -61,9 +64,9 @@ class WebSocketServer:
         # Update the current task graph
         self.task_graph = TaskGraph.from_json(task_graph_data)
 
-    def run(self, host='localhost', port=5678):
+    def run(self, host="localhost", port=5678):
         print("Starting server.")
-        start_server = websockets.serve(self.server, host, port) # type: ignore
+        start_server = websockets.serve(self.server, host, port)  # type: ignore
         print("Server started.")
         asyncio.get_event_loop().run_until_complete(start_server)
         print("Server running.")

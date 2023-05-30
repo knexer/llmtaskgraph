@@ -47,11 +47,9 @@ class Task(ABC):
     async def run(
         self, graph: TaskGraph, function_registry: dict[str, Callable]
     ) -> None:
-        self.output = asyncio.get_running_loop().create_future()
         # Memoize output.
         if self.output_data is not None:
-            self.output.set_result(self.output_data)
-            return
+            return self.output_data
 
         # Collect dependncy output. We know tasks are actual Tasks with output futures at this point.
         dep_results: list[Any] = [await dep.output for dep in self.deps]  # type: ignore
@@ -61,14 +59,10 @@ class Task(ABC):
 
         # Execute task.
         context: GraphContext = graph.make_context_for(self)
-        try:
-            self.output_data = await self.execute(
-                context, function_registry, *dep_results, **kwdep_results
-            )
-        except Exception as e:
-            self.output.set_exception(e)
-            raise
-        self.output.set_result(self.output_data)
+        self.output_data = await self.execute(
+            context, function_registry, *dep_results, **kwdep_results
+        )
+        return self.output_data
 
     @abstractmethod
     async def execute(

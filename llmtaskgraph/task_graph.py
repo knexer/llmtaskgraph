@@ -22,7 +22,7 @@ class TaskGraph:
         self.tasks.append(task)
         if self.started:
             assert self.function_registry is not None
-            asyncio.create_task(task.run(self, self.function_registry))
+            task.output = asyncio.create_task(task.run(self, self.function_registry))
 
         return task.task_id
 
@@ -43,16 +43,24 @@ class TaskGraph:
         # Start all initially available tasks.
         # N.B.: Tasks added during execution will be started by add_task.
         for task in self.tasks:
-            asyncio.create_task(task.run(self, function_registry))
-        # Let tasks start so we have something to wait for below.
-        await asyncio.sleep(0)
+            task.output = asyncio.create_task(task.run(self, function_registry))
 
-        # while any task is not started or not done
-        while any(task.output is None or not task.output.done() for task in self.tasks):
+        # while any task is not started or not done, and no tasks have exceptions
+        while any(not task.output.done() for task in self.tasks) and not any(
+            task.output.done() and task.output.exception() is not None
+            for task in self.tasks
+        ):
             # wait for every started task to be done
             await asyncio.wait(
                 [task.output for task in self.tasks if task.output is not None]
             )
+
+        # If any task has an exception, raise it.
+        for task in self.tasks:
+            if task.output.done() and task.output.exception() is not None:
+                # TODO: Also cancel all other tasks?
+                # TODO: What if multiple tasks have exceptions?
+                raise task.output.exception()
 
         self.started = False
         self.function_registry = None
