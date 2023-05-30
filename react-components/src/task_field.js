@@ -58,39 +58,3 @@ export default function TaskField({ task, fieldName, onEdit }) {
     </div>
   );
 }
-
-import "jsoneditor/dist/jsoneditor.css";
-
-const JSONEditorReact = (props) => {
-  const containerRef = useRef(null);
-  const jsoneditor = useRef(null);
-
-  useEffect(() => {
-    const options = { ...props };
-    delete options.json;
-
-    jsoneditor.current = new JSONEditor(containerRef.current, options);
-
-    if ("json" in props) {
-      jsoneditor.current.set(props.json);
-    }
-
-    return () => {
-      if (jsoneditor.current) {
-        jsoneditor.current.destroy();
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if ("json" in props) {
-      jsoneditor.current.update(props.json);
-    }
-
-    if ("mode" in props) {
-      jsoneditor.current.setMode(props.mode);
-    }
-  }, [props]);
-
-  return <div className="jsoneditor-react-container" ref={containerRef} />;
-};
