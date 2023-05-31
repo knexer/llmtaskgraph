@@ -25,3 +25,10 @@
   color: black;
   border-color: black;
 }
+
+.task-field {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 5px;
+  margin: 5px;
+}

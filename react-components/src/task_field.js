@@ -4,6 +4,54 @@ import JSONEditor from "jsoneditor";
 import "jsoneditor/dist/jsoneditor.css";
 
 export default function TaskField({ task, fieldName, computedBy, onEdit }) {
+  const [editing, setEditing] = React.useState(false);
+
+  const handleEdit = () => {
+    setEditing(true);
+  };
+
+  const handleEndEditing = () => {
+    setEditing(false);
+  };
+
+  const handleDelete = () => {
+    onEdit(task.task_id, fieldName, null);
+  };
+
+  const elide = (str) => {
+    if (str.length > 300) {
+      return str.slice(0, 200) + "..." + str.slice(-100);
+    } else {
+      return str;
+    }
+  };
+
+  return (
+    <div className="task-field">
+      <div>
+        Field <b>{fieldName}</b> (computed by <b>{computedBy}</b>):
+      </div>
+      {editing ? (
+        <TaskFieldEditor
+          task={task}
+          fieldName={fieldName}
+          onEdit={onEdit}
+          onEndEditing={handleEndEditing}
+        />
+      ) : (
+        <>
+          <div>{elide(JSON.stringify(task[fieldName]))}</div>
+          <button onClick={handleEdit}>Edit</button>
+          {task[fieldName] !== null ? (
+            <button onClick={handleDelete}>Clear</button>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
+function TaskFieldEditor({ task, fieldName, onEdit, onEndEditing }) {
   const containerRef = useRef(null);
   const jsoneditor = useRef(null);
 
@@ -39,24 +87,17 @@ export default function TaskField({ task, fieldName, computedBy, onEdit }) {
     console.log("jsoneditor.current.get():", jsoneditor.current.get());
     const json = jsoneditor.current.get();
     onEdit(task.task_id, fieldName, json);
-  };
-
-  const handleDelete = () => {
-    onEdit(task.task_id, fieldName, null);
+    onEndEditing();
   };
 
   const handleCancel = () => {
-    jsoneditor.current.set(task[fieldName]);
+    onEndEditing();
   };
 
   return (
     <div>
-      <div>
-        {fieldName} (computed by {computedBy})
-      </div>
       <div className="jsoneditor-react-container" ref={containerRef} />
       <button onClick={handleSave}>Save</button>
-      <button onClick={handleDelete}>Clear</button>
       <button onClick={handleCancel}>Cancel</button>
     </div>
   );
