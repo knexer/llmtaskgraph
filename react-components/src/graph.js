@@ -102,6 +102,7 @@ export default function Graph({ serialized_graph, select_task_id }) {
         fitViewOptions={{ padding: 0.1 }}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
+        nodesDraggable={false}
       >
         <Controls />
         <MiniMap />
