@@ -54,6 +54,22 @@ export default class SerializedGraph {
     if (deps.some((dep) => dep.output_data === null)) {
       return TaskState.WAITING;
     }
+
+    const allGraphs = [].concat(
+      [this.serialized_graph],
+      this.allTasks()
+        .filter((t) => t.type === "TaskGraphTask")
+        .map((t) => t.subgraph)
+    );
+
+    const parentSubgraph = allGraphs.find((g) =>
+      g.tasks.some((t) => t.task_id === task_id)
+    );
+
+    if (parentSubgraph.graph_input === null) {
+      return TaskState.WAITING;
+    }
+
     return TaskState.READY;
   }
 
@@ -62,6 +78,7 @@ export default class SerializedGraph {
     const task = this.getTask(task_id);
     if (task.type === "TaskGraphTask") {
       if (fieldName === "graph_input") {
+        task.subgraph.graph_input = task.graph_input;
         this.invalidateSubgraph(task.subgraph);
         task.output_data = null;
       } else if (fieldName !== "output_data") {
