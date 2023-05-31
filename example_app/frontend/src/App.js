@@ -37,16 +37,27 @@ export default function App() {
     // Deep copy the serialized graph
     const new_graph = serialized_graph.copy();
 
-    // Find the task
-    const task = new_graph.getTask(task_id);
-    if (!task) {
-      console.log(`Task ${task_id} not found`);
-      return;
-    }
+    if (task_id === undefined) {
+      // We're editing the graph itself. The only editable field is graph_input.
+      if (fieldName !== "graph_input") {
+        console.log("Invalid field name");
+        return;
+      }
 
-    // Update the field
-    task[fieldName] = fieldData;
-    new_graph.onTaskUpdated(task_id, fieldName);
+      new_graph.serialized_graph.graph_input = fieldData;
+      new_graph.invalidateSubgraph(new_graph.serialized_graph);
+    } else {
+      // Find the task
+      const task = new_graph.getTask(task_id);
+      if (!task) {
+        console.log(`Task ${task_id} not found`);
+        return;
+      }
+
+      // Update the field
+      task[fieldName] = fieldData;
+      new_graph.onTaskUpdated(task_id, fieldName);
+    }
 
     // Update the state
     setSerializedGraph(new_graph);
