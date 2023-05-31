@@ -25,23 +25,25 @@ export default function TaskDetail({ graph, task_id, onEdit }) {
   if (task_id === null) {
     return (
       <div className="task-detail">
-        <div>Graph Detail</div>
-        <div>
-          State: {colored_state(graph, graph.serialized_graph.output_task)}
-        </div>
-        <TaskField
-          task={graph.serialized_graph}
-          fieldName="graph_input"
-          onEdit={onEdit}
-        />
-        {graph.serialized_graph.output_task && (
+        <header className="task-detail-header">
+          Graph Detail (
+          {colored_state(graph, graph.serialized_graph.output_task)})
+        </header>
+        <div className="task-detail-content">
           <TaskField
-            task={graph.getTask(graph.serialized_graph.output_task)}
-            fieldName="output_data"
-            computedBy={"output task " + graph.serialized_graph.output_task}
+            task={graph.serialized_graph}
+            fieldName="graph_input"
             onEdit={onEdit}
           />
-        )}
+          {graph.serialized_graph.output_task && (
+            <TaskField
+              task={graph.getTask(graph.serialized_graph.output_task)}
+              fieldName="output_data"
+              computedBy={"output task " + graph.serialized_graph.output_task}
+              onEdit={onEdit}
+            />
+          )}
+        </div>
       </div>
     );
   }
