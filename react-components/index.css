@@ -26,9 +26,34 @@
   border-color: black;
 }
 
+.task-detail {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  flex: 1;
+  border-top: 1px solid #ccc;
+  overflow: auto;
+}
+
+.task-detail-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  height: 35px;
+  padding: 0 10px;
+  background-color: #eee;
+}
+
+.task-detail-content {
+  overflow: auto;
+  padding: 10px;
+}
+
 .task-field {
   border: 1px solid #ccc;
   border-radius: 5px;
   padding: 5px;
-  margin: 5px;
+  margin: 5px 0;
 }

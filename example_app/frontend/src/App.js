@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { GraphAndDetail } from "./app/graph_and_detail";
 import { SerializedGraph } from "llmtaskgraph";
+import StatusBar from "./app/status_bar";
 
 const serverUrl = "ws://localhost:5678";
 
@@ -76,7 +77,7 @@ export default function App() {
     <div className="app">
       {serialized_graph ? (
         <>
-          <button onClick={sendGraph}>Run</button>
+          <StatusBar onRun={sendGraph} />
           <GraphAndDetail
             serialized_graph={serialized_graph}
             onEdit={handleEdit}

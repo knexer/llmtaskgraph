@@ -12,6 +12,14 @@ code {
     monospace;
 }
 
+.app {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  height: 100vh;
+}
+
 .graph-and-detail {
   display: flex;
   flex-direction: column;
@@ -22,9 +30,20 @@ code {
 
 .graph {
   flex: 1;
-  height: 500px;
 }
 
 .task-detail {
   flex: 1;
+}
+
+.status-bar {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  height: 35px;
+  padding: 0 10px;
+  background-color: #eee;
+  border-bottom: 1px solid #ccc;
 }

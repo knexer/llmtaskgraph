@@ -51,19 +51,22 @@ export default function TaskDetail({ graph, task_id, onEdit }) {
 
   return (
     <div className="task-detail">
-      <div>Task Detail ({type})</div>
-      <div>State: {colored_state(graph, task.task_id)}</div>
-      {task.error !== null ? <div>Error: {task.error}</div> : null}
-      <div>Task ID: {task.task_id}</div>
-      {type === "LLMTask" ? (
-        <LLMTaskDetail task={task} onEdit={onEdit} />
-      ) : null}
-      {type === "PythonTask" ? (
-        <PythonTaskDetail task={task} onEdit={onEdit} />
-      ) : null}
-      {type === "TaskGraphTask" ? (
-        <TaskGraphTaskDetail task={task} onEdit={onEdit} />
-      ) : null}
+      <header className="task-detail-header">
+        {type} Detail ({colored_state(graph, task.task_id)})
+      </header>
+      <div className="task-detail-content">
+        {task.error !== null ? <div>Error: {task.error}</div> : null}
+        <div>Task ID: {task.task_id}</div>
+        {type === "LLMTask" ? (
+          <LLMTaskDetail task={task} onEdit={onEdit} />
+        ) : null}
+        {type === "PythonTask" ? (
+          <PythonTaskDetail task={task} onEdit={onEdit} />
+        ) : null}
+        {type === "TaskGraphTask" ? (
+          <TaskGraphTaskDetail task={task} onEdit={onEdit} />
+        ) : null}
+      </div>
     </div>
   );
 }
