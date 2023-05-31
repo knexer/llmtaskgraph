@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { GraphAndDetail } from "./app/graph_and_detail";
 import { SerializedGraph } from "llmtaskgraph";
 import StatusBar from "./app/status_bar";
@@ -8,6 +8,9 @@ const serverUrl = "ws://localhost:5678";
 export default function App() {
   const [serialized_graph, setSerializedGraph] = useState(null);
   const [ws, setWs] = useState(null);
+  const [startTime, setStartTime] = useState(null);
+  const startTimeRef = useRef(null);
+  startTimeRef.current = startTime;
 
   // Initialize WebSocket connection when the component mounts
   useEffect(() => {
@@ -22,8 +25,16 @@ export default function App() {
 
     ws.onmessage = (event) => {
       console.log("Updated graph received");
-      const data = JSON.parse(event.data);
-      setSerializedGraph(new SerializedGraph(data));
+      const message = JSON.parse(event.data);
+      const backendState = message.backend_state;
+
+      if (backendState === "RUNNING" && startTimeRef.current === null) {
+        setStartTime(new Date());
+      } else if (backendState === "DONE") {
+        setStartTime(null);
+      }
+      const graph = message.graph;
+      setSerializedGraph(new SerializedGraph(graph));
     };
 
     ws.onclose = () => {
@@ -77,7 +88,7 @@ export default function App() {
     <div className="app">
       {serialized_graph ? (
         <>
-          <StatusBar onRun={sendGraph} />
+          <StatusBar startTime={startTime} onRun={sendGraph} />
           <GraphAndDetail
             serialized_graph={serialized_graph}
             onEdit={handleEdit}

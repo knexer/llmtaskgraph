@@ -14,7 +14,7 @@ class WebSocketServer:
     async def server(self, websocket, path):
         print("Client connected.")
         # Send the initial task graph to the client
-        await self.send_graph(websocket)
+        await self.send_graph(websocket, "CONNECTED")
         print("Initial task graph sent.")
 
         # Main event loop:
@@ -37,7 +37,7 @@ class WebSocketServer:
         while not graph_exec.done():
             await asyncio.sleep(1)
             # Serialize the current task graph and send it to the client
-            await self.send_graph(websocket)
+            await self.send_graph(websocket, "RUNNING")
             print("Task graph update sent.")
 
         if graph_exec.exception() is not None:
@@ -45,12 +45,14 @@ class WebSocketServer:
 
         # Serialize the final task graph and send it to the client
         print("Sending final task graph.")
-        await self.send_graph(websocket)
+        await self.send_graph(websocket, "DONE")
 
-    async def send_graph(self, websocket):
+    async def send_graph(self, websocket, state):
         # Serialize the current task graph and send it to the client
         task_graph_data = self.task_graph.to_json()
-        await websocket.send(json.dumps(task_graph_data))
+        await websocket.send(
+            json.dumps({"backend_state": state, "graph": task_graph_data})
+        )
 
     async def get_updated_graph(self, websocket):
         print("Waiting for updated task graph.")
