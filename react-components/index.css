@@ -1,6 +1,7 @@
 
 
 .task-node {
+  border-style: solid;
   border-radius: 10px;
   padding: 15px;
   white-space: nowrap;
@@ -24,6 +25,18 @@
 .task-node__complete {
   color: black;
   border-color: black;
+}
+
+.task-node__selected {
+  border-width: 3px;
+}
+
+.task-node__unrelated {
+  opacity: 0.3;
+}
+
+.handle__unrelated {
+  opacity: 0.3;
 }
 
 .task-detail {

@@ -42,6 +42,16 @@ export default class SerializedGraph {
     return deps.concat(kwdeps).concat(created_by);
   }
 
+  getParentTask(taskId) {
+    const allTaskGraphTasks = this.allTasks().filter(
+      (t) => t.type === "TaskGraphTask"
+    );
+
+    return allTaskGraphTasks.find((g) =>
+      g.subgraph.tasks.some((t) => t.task_id === taskId)
+    );
+  }
+
   getTaskState(task_id) {
     const task = this.getTask(task_id);
     if (task.output_data !== null) {
@@ -55,22 +65,103 @@ export default class SerializedGraph {
       return TaskState.WAITING;
     }
 
-    const allGraphs = [].concat(
-      [this.serialized_graph],
-      this.allTasks()
-        .filter((t) => t.type === "TaskGraphTask")
-        .map((t) => t.subgraph)
-    );
+    const parentTask = getParentTask(task);
 
-    const parentSubgraph = allGraphs.find((g) =>
-      g.tasks.some((t) => t.task_id === task_id)
-    );
-
-    if (parentSubgraph.graph_input === null) {
-      return TaskState.WAITING;
+    if (parentTask) {
+      return parentTask.graph_input === null
+        ? TaskState.WAITING
+        : TaskState.READY;
     }
 
-    return TaskState.READY;
+    return this.serialized_graph.graph_input === null
+      ? TaskState.WAITING
+      : TaskState.READY;
+  }
+
+  // Returns the transitive dependencies and dependents of the task with the given id.
+  getRelatedTaskIds(taskId) {
+    const transitiveClosure = (task_id, depsMap) => {
+      const deps = new Set();
+      const queue = [task_id];
+      while (queue.length > 0) {
+        const task_id = queue.shift();
+        if (!deps.has(task_id)) {
+          deps.add(task_id);
+          queue.push(...depsMap[task_id]);
+        }
+      }
+      deps.delete(task_id);
+      return deps;
+    };
+
+    const getRelatedTaskIdsInSubgraph = (subgraph, task_id) => {
+      // Find all tasks in subgraph that are relevant to task.
+      // First, find all tasks that task transitively depends on.
+      const forwardDepsMap = {};
+      for (const subgraphTask of subgraph.tasks) {
+        forwardDepsMap[subgraphTask.task_id] = this.getDependencies(
+          subgraphTask.task_id
+        ).map((dep) => dep.task_id);
+      }
+
+      // Invert forwardDepsMap to get reverseDepsMap.
+      const reverseDepsMap = {};
+      for (const task_id of Object.keys(forwardDepsMap)) {
+        reverseDepsMap[task_id] = [];
+      }
+      for (const task_id of Object.keys(forwardDepsMap)) {
+        for (const dep of forwardDepsMap[task_id]) {
+          reverseDepsMap[dep].push(task_id);
+        }
+      }
+
+      const dependencies = transitiveClosure(task_id, forwardDepsMap);
+      const dependents = transitiveClosure(task_id, reverseDepsMap);
+      return new Set([...dependencies, ...dependents]);
+    };
+
+    let relatedTaskIds = new Set([taskId]);
+
+    // Find the task's ancestor graphs.
+    // Find all related tasks in the task's ancestor graphs.
+    const ancestorTaskIds = new Set();
+    let subgraphTaskId = taskId;
+    for (
+      let ancestorTask = this.getParentTask(taskId);
+      ancestorTask;
+      subgraphTaskId = ancestorTask.task_id,
+        ancestorTask = this.getParentTask(ancestorTask.task_id)
+    ) {
+      ancestorTaskIds.add(ancestorTask.task_id);
+      const ancestorGraphRelatedTasks = getRelatedTaskIdsInSubgraph(
+        ancestorTask.subgraph,
+        subgraphTaskId
+      );
+      relatedTaskIds = new Set([
+        ...relatedTaskIds,
+        ...ancestorGraphRelatedTasks,
+      ]);
+    }
+    const rootGraphRelatedTasks = getRelatedTaskIdsInSubgraph(
+      this.serialized_graph,
+      subgraphTaskId
+    );
+    relatedTaskIds = new Set([...relatedTaskIds, ...rootGraphRelatedTasks]);
+
+    // Recursively expand any related TaskGraphTasks.
+    const addedTasksQueue = [...relatedTaskIds];
+    while (addedTasksQueue.length > 0) {
+      const task_id = addedTasksQueue.shift();
+      const task = this.getTask(task_id);
+      if (task.type === "TaskGraphTask") {
+        const subtaskIds = task.subgraph.tasks.map((t) => t.task_id);
+        relatedTaskIds = new Set([...relatedTaskIds, ...subtaskIds]);
+        addedTasksQueue.push(...subtaskIds);
+      }
+    }
+
+    // Add in the ancestor tasks of taskId.
+    return new Set([...relatedTaskIds, ...ancestorTaskIds]);
   }
 
   onTaskUpdated(task_id, fieldName) {

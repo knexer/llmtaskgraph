@@ -9,6 +9,7 @@ export function GraphAndDetail({ serialized_graph, onEdit }) {
     <div className={"graph-and-detail"}>
       <Graph
         serialized_graph={serialized_graph}
+        selected_task_id={selected_task_id}
         select_task_id={update_selected_task_id}
       />
       <TaskDetail

@@ -53,7 +53,11 @@ const nodeTypes = {
   Task: TaskNode,
 };
 
-export default function Graph({ serialized_graph, select_task_id }) {
+export default function Graph({
+  serialized_graph,
+  selected_task_id,
+  select_task_id,
+}) {
   // Create nodes from serialized graph
 
   // Create graph state
@@ -90,6 +94,20 @@ export default function Graph({ serialized_graph, select_task_id }) {
   const onPaneClick = (_) => {
     select_task_id(null);
   };
+
+  // Update each node in graph.nodes based on selected task.
+  const relatedTaskIds = selected_task_id
+    ? serialized_graph.getRelatedTaskIds(selected_task_id)
+    : new Set(serialized_graph.allTasks().map((task) => task.task_id));
+  graph.nodes = graph.nodes.map((node) => {
+    const selection_state =
+      node.id === selected_task_id
+        ? "selected"
+        : relatedTaskIds.has(node.id)
+        ? "related"
+        : "unrelated";
+    return { ...node, data: { ...node.data, selection_state } };
+  });
 
   return (
     <div className="graph">

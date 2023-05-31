@@ -51,8 +51,13 @@ export function TaskNode({ data }) {
   const task = data.task;
   const graph = data.graph;
   const direction = data.direction;
+  const selection_state = data.selection_state || "related";
   const isHorizontal = direction === "LR";
-  const handleStyle = isHorizontal ? { top: 10 } : { left: 10 };
+
+  // TODO can this be pulled from a css class?
+  const handleStyle = selection_state === "unrelated" ? { opacity: 0.2 } : {};
+  const taskCreationHandleStyle = isHorizontal ? { top: 10 } : { left: 10 };
+
   // Show the basic task info. Connectivity info is shown by edges. The details view will show the rest.
   const task_state = graph.getTaskState(task.task_id);
   return (
@@ -60,9 +65,10 @@ export function TaskNode({ data }) {
       <Handle
         type="target"
         position={isHorizontal ? Position.Left : Position.Top}
+        style={handleStyle}
       />
       <div
-        className={"task-node__" + task_state + " react-flow__node-default"}
+        className={`task-node__${task_state} react-flow__node-default task-node__${selection_state}`}
         style={
           task.type === "TaskGraphTask"
             ? {
@@ -78,13 +84,15 @@ export function TaskNode({ data }) {
       <Handle
         type="source"
         position={isHorizontal ? Position.Right : Position.Bottom}
+        style={handleStyle}
         id="output"
       />
       <Handle
         type="source"
         position={isHorizontal ? Position.Right : Position.Bottom}
+        className="handle__${selection_state}"
         id="task creation"
-        style={handleStyle}
+        style={{ ...handleStyle, ...taskCreationHandleStyle }}
       />
     </>
   );
