@@ -2,59 +2,25 @@ import React from "react";
 
 import TaskField from "./task_field";
 
-import { TaskState } from "./serialized_graph";
-
-// TODO: use css classes
-const colored_state = (graph, task_id) => {
-  const task_state = graph.getTaskState(task_id);
-  switch (task_state) {
-    case TaskState.ERROR:
-      return <b style={{ color: "red" }}>{task_state}</b>;
-    case TaskState.COMPLETE:
-      return <b style={{ color: "black" }}>{task_state}</b>;
-    case TaskState.WAITING:
-      return <b style={{ color: "orange" }}>{task_state}</b>;
-    case TaskState.READY:
-      return <b style={{ color: "green" }}>{task_state}</b>;
-    default:
-      return <b>{task_state}</b>;
-  }
+const stateLabel = (graph, taskId) => {
+  const taskState = graph.getTaskState(taskId);
+  return (
+    <b className={`state-label__${taskState.toLowerCase()}`}>{taskState}</b>
+  );
 };
 
-export default function TaskDetail({ graph, task_id, onEdit }) {
-  if (task_id === null) {
-    return (
-      <div className="task-detail">
-        <header className="task-detail-header">
-          Graph Detail ({colored_state(graph, graph.graphData.output_task)})
-        </header>
-        <div className="task-detail-content">
-          <TaskField
-            task={graph.graphData}
-            computedBy={"user input"}
-            fieldName="graph_input"
-            onEdit={onEdit}
-          />
-          {graph.graphData.output_task && (
-            <TaskField
-              task={graph.getTask(graph.graphData.output_task)}
-              fieldName="output_data"
-              computedBy={"output task " + graph.graphData.output_task}
-              onEdit={onEdit}
-            />
-          )}
-        </div>
-      </div>
-    );
+export default function TaskDetail({ graph, taskId, onEdit }) {
+  if (taskId === null) {
+    return <GraphDetail graph={graph} onEdit={onEdit} />;
   }
 
-  const task = graph.getTask(task_id);
+  const task = graph.getTask(taskId);
   const type = task.type;
 
   return (
     <div className="task-detail">
       <header className="task-detail-header">
-        {type} Detail ({colored_state(graph, task.task_id)})
+        {type} Detail ({stateLabel(graph, task.task_id)})
       </header>
       <div className="task-detail-content">
         {task.error !== null ? <div>Error: {task.error}</div> : null}
@@ -68,6 +34,32 @@ export default function TaskDetail({ graph, task_id, onEdit }) {
         {type === "TaskGraphTask" ? (
           <TaskGraphTaskDetail task={task} onEdit={onEdit} />
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function GraphDetail({ graph, onEdit }) {
+  return (
+    <div className="task-detail">
+      <header className="task-detail-header">
+        Graph Detail ({stateLabel(graph, graph.graphData.output_task)})
+      </header>
+      <div className="task-detail-content">
+        <TaskField
+          task={graph.graphData}
+          computedBy={"user input"}
+          fieldName="graph_input"
+          onEdit={onEdit}
+        />
+        {graph.graphData.output_task && (
+          <TaskField
+            task={graph.getTask(graph.graphData.output_task)}
+            fieldName="output_data"
+            computedBy={"output task " + graph.graphData.output_task}
+            onEdit={onEdit}
+          />
+        )}
       </div>
     </div>
   );

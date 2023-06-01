@@ -39,6 +39,22 @@
   opacity: 0.3;
 }
 
+.state-label__error {
+  color: red;
+}
+
+.state-label__waiting {
+  color: orange;
+}
+
+.state-label__ready {
+  color: green;
+}
+
+.state-label__complete {
+  color: black;
+}
+
 .task-detail {
   display: flex;
   flex-direction: column;
