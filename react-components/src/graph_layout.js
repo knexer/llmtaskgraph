@@ -55,7 +55,6 @@ const useLayoutedGraph = (serializedGraph) => {
     const initialEdges = allTasks.flatMap((task) => makeEdges(task, allTasks));
 
     elkLayout(initialNodes, initialEdges, direction).then((layouted) => {
-      console.log("layouted");
       setGraph(layouted);
     });
     return () => {};
