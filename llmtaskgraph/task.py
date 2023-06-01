@@ -266,10 +266,8 @@ class TaskGraphTask(Task):
                 context, *dep_results, **kwdep_results
             )
 
-        return await self.subgraph.run(
-            function_registry,
-            self.graph_input,
-        )
+        self.subgraph.graph_input = self.graph_input
+        return await self.subgraph.run(function_registry)
 
     def to_json(self):
         json = super().to_json()

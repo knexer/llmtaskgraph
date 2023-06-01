@@ -34,11 +34,8 @@ class TaskGraph:
     def make_context_for(self, task: Task):
         return GraphContext(self, task)
 
-    async def run(
-        self, function_registry: dict[str, Callable], graph_input: Any = None
-    ) -> Any:
+    async def run(self, function_registry: dict[str, Callable]) -> Any:
         self.started = True
-        self.graph_input = graph_input
         self.function_registry = function_registry
         # Start all initially available tasks.
         # N.B.: Tasks added during execution will be started by add_task.

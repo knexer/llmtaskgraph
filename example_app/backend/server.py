@@ -6,10 +6,9 @@ from llmtaskgraph.task_graph import TaskGraph
 
 
 class WebSocketServer:
-    def __init__(self, initial_task_graph, function_registry, graph_input):
+    def __init__(self, initial_task_graph, function_registry):
         self.task_graph = initial_task_graph
         self.function_registry = function_registry
-        self.graph_input = graph_input
 
     async def server(self, websocket, path):
         print("Client connected.")
@@ -28,9 +27,7 @@ class WebSocketServer:
 
     async def execute_current_graph(self, websocket):
         # Start the current task graph
-        graph_exec = asyncio.create_task(
-            self.task_graph.run(self.function_registry, self.graph_input)
-        )
+        graph_exec = asyncio.create_task(self.task_graph.run(self.function_registry))
         print("Task graph started.")
 
         # Send updates once per second

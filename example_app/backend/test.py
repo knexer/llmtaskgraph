@@ -14,8 +14,8 @@ load_dotenv()
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
 
-
 nested_task_ran = False
+
 
 def nested_task(_):
     global nested_task_ran
@@ -38,8 +38,9 @@ function_registry = {}
 function_registry["nested_task"] = nested_task
 function_registry["add_nested_task"] = add_nested_task
 task_graph.add_task(PythonTask("add_nested_task"))
+task_graph.graph_input = {}
 
-server = WebSocketServer(task_graph, function_registry, {})
+server = WebSocketServer(task_graph, function_registry)
 print("Created server.")
 server.run()
 
