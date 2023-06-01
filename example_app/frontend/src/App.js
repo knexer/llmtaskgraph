@@ -1,96 +1,75 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { GraphAndDetail } from "./app/graph_and_detail";
 import { SerializedGraph } from "llmtaskgraph";
 import StatusBar from "./app/status_bar";
+import useWebSocket from "./app/websocket";
 
 const serverUrl = "ws://localhost:5678";
 
 export default function App() {
-  const [serialized_graph, setSerializedGraph] = useState(null);
-  const [ws, setWs] = useState(null);
+  const [serializedGraph, setSerializedGraph] = useState(null);
+  const { message, sendMessage } = useWebSocket(serverUrl);
   const [startTime, setStartTime] = useState(null);
-  const startTimeRef = useRef(null);
-  startTimeRef.current = startTime;
 
-  // Initialize WebSocket connection when the component mounts
   useEffect(() => {
-    const ws = new WebSocket(serverUrl);
-    setWs(ws);
-
-    console.log("Connecting to server");
-
-    ws.onopen = () => {
-      console.log("Connected to server");
-    };
-
-    ws.onmessage = (event) => {
+    if (message) {
       console.log("Updated graph received");
-      const message = JSON.parse(event.data);
-      const backendState = message.backend_state;
+      const parsedMessage = JSON.parse(message);
+      const backendState = parsedMessage.backend_state;
 
-      if (backendState === "RUNNING" && startTimeRef.current === null) {
+      if (backendState === "RUNNING" && startTime === null) {
         setStartTime(new Date());
       } else if (backendState === "DONE") {
         setStartTime(null);
       }
-      const graph = message.graph;
+
+      const graph = parsedMessage.graph;
       setSerializedGraph(new SerializedGraph(graph));
-    };
+    }
+  }, [message]);
 
-    ws.onclose = () => {
-      console.log("Connection closed");
-    };
-
-    // Clean up the connection when the component unmounts
-    return () => ws.close();
-  }, []);
-
-  const handleEdit = (task_id, fieldName, fieldData) => {
+  const handleEdit = (taskId, fieldName, fieldData) => {
     // Deep copy the serialized graph
-    const new_graph = serialized_graph.copy();
+    const newGraph = serializedGraph.copy();
 
-    if (task_id === undefined) {
+    if (taskId === undefined) {
       // We're editing the graph itself. The only editable field is graph_input.
       if (fieldName !== "graph_input") {
         console.log("Invalid field name");
         return;
       }
 
-      new_graph.serialized_graph.graph_input = fieldData;
-      new_graph.invalidateSubgraph(new_graph.serialized_graph);
+      newGraph.serialized_graph.graph_input = fieldData;
+      newGraph.invalidateSubgraph(newGraph.serialized_graph);
     } else {
       // Find the task
-      const task = new_graph.getTask(task_id);
+      const task = newGraph.getTask(taskId);
       if (!task) {
-        console.log(`Task ${task_id} not found`);
+        console.log(`Task ${taskId} not found`);
         return;
       }
 
       // Update the field
       task[fieldName] = fieldData;
-      new_graph.onTaskUpdated(task_id, fieldName);
+      newGraph.onTaskUpdated(taskId, fieldName);
     }
 
     // Update the state
-    setSerializedGraph(new_graph);
+    setSerializedGraph(newGraph);
   };
 
   const sendGraph = () => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      console.log("WebSocket is not connected");
-      return;
-    }
     console.log("Sending updated task graph");
-    ws.send(JSON.stringify(serialized_graph.serialized_graph));
+    sendMessage(JSON.stringify(serializedGraph.serialized_graph));
   };
 
   return (
     <div className="app">
-      {serialized_graph ? (
+      {serializedGraph ? (
         <>
           <StatusBar startTime={startTime} onRun={sendGraph} />
           <GraphAndDetail
-            serialized_graph={serialized_graph}
+            serialized_graph={serializedGraph}
             onEdit={handleEdit}
           />
         </>
