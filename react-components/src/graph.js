@@ -68,8 +68,8 @@ export default function Graph({
     const direction = "TB"; // TB or LR
 
     const all_tasks = serialized_graph.allTasks();
-    const initialNodes = serialized_graph.serialized_graph.tasks.flatMap(
-      (task) => makeNodes(serialized_graph, task, direction)
+    const initialNodes = serialized_graph.graphData.tasks.flatMap((task) =>
+      makeNodes(serialized_graph, task, direction)
     );
     const initialEdges = all_tasks.flatMap((task) =>
       makeEdges(task, all_tasks)

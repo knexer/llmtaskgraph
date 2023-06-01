@@ -6,14 +6,12 @@ export const TaskState = {
 };
 
 export default class SerializedGraph {
-  constructor(serialized_graph) {
-    this.serialized_graph = serialized_graph;
+  constructor(graphData) {
+    this.graphData = graphData;
   }
 
   copy() {
-    return new SerializedGraph(
-      JSON.parse(JSON.stringify(this.serialized_graph))
-    );
+    return new SerializedGraph(JSON.parse(JSON.stringify(this.graphData)));
   }
 
   // Returns a list of all tasks in the graph.
@@ -25,7 +23,7 @@ export default class SerializedGraph {
         )
       );
     }
-    return allTasksImpl(this.serialized_graph);
+    return allTasksImpl(this.graphData);
   }
 
   // Returns the task with the given id.
@@ -73,7 +71,7 @@ export default class SerializedGraph {
         : TaskState.READY;
     }
 
-    return this.serialized_graph.graph_input === null
+    return this.graphData.graph_input === null
       ? TaskState.WAITING
       : TaskState.READY;
   }
@@ -143,7 +141,7 @@ export default class SerializedGraph {
       ]);
     }
     const rootGraphRelatedTasks = getRelatedTaskIdsInSubgraph(
-      this.serialized_graph,
+      this.graphData,
       subgraphTaskId
     );
     relatedTaskIds = new Set([...relatedTaskIds, ...rootGraphRelatedTasks]);
@@ -193,7 +191,7 @@ export default class SerializedGraph {
       task.error = null;
     }
 
-    this.onTaskUpdatedInSubgraph(task_id, this.serialized_graph);
+    this.onTaskUpdatedInSubgraph(task_id, this.graphData);
   }
 
   // Searches the given subgraph for task_id, and invalidates tasks that depend
@@ -270,7 +268,7 @@ export default class SerializedGraph {
         (t) => t.task_id !== task_id
       );
     } else {
-      this.serialized_graph.tasks = this.serialized_graph.tasks.filter(
+      this.graphData.tasks = this.graphData.tasks.filter(
         (t) => t.task_id !== task_id
       );
     }

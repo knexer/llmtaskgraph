@@ -38,8 +38,8 @@ export default function App() {
         throw new Error("Invalid field name");
       }
 
-      newGraph.serialized_graph.graph_input = fieldData;
-      newGraph.invalidateSubgraph(newGraph.serialized_graph);
+      newGraph.graphData.graph_input = fieldData;
+      newGraph.invalidateSubgraph(newGraph.graphData);
     } else {
       // We're editing a task.
       const task = newGraph.getTask(taskId);
@@ -57,7 +57,7 @@ export default function App() {
   };
 
   const sendGraph = () => {
-    sendMessage(JSON.stringify(serializedGraph.serialized_graph));
+    sendMessage(JSON.stringify(serializedGraph.graphData));
   };
 
   return (
