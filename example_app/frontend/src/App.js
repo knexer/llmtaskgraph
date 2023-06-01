@@ -8,12 +8,11 @@ const serverUrl = "ws://localhost:5678";
 
 export default function App() {
   const [serializedGraph, setSerializedGraph] = useState(null);
-  const { message, sendMessage } = useWebSocket(serverUrl);
+  const { connected, message, sendMessage } = useWebSocket(serverUrl);
   const [startTime, setStartTime] = useState(null);
 
   useEffect(() => {
     if (message) {
-      console.log("Updated graph received");
       const parsedMessage = JSON.parse(message);
       const backendState = parsedMessage.backend_state;
 
@@ -32,24 +31,23 @@ export default function App() {
     // Deep copy the serialized graph
     const newGraph = serializedGraph.copy();
 
+    // There are two cases: editing the graph itself, or editing a task.
     if (taskId === undefined) {
       // We're editing the graph itself. The only editable field is graph_input.
       if (fieldName !== "graph_input") {
-        console.log("Invalid field name");
-        return;
+        throw new Error("Invalid field name");
       }
 
       newGraph.serialized_graph.graph_input = fieldData;
       newGraph.invalidateSubgraph(newGraph.serialized_graph);
     } else {
-      // Find the task
+      // We're editing a task.
       const task = newGraph.getTask(taskId);
       if (!task) {
-        console.log(`Task ${taskId} not found`);
-        return;
+        throw new Error(`Task ${taskId} not found`);
       }
 
-      // Update the field
+      // Update the specified field.
       task[fieldName] = fieldData;
       newGraph.onTaskUpdated(taskId, fieldName);
     }
@@ -59,13 +57,12 @@ export default function App() {
   };
 
   const sendGraph = () => {
-    console.log("Sending updated task graph");
     sendMessage(JSON.stringify(serializedGraph.serialized_graph));
   };
 
   return (
     <div className="app">
-      {serializedGraph ? (
+      {connected && serializedGraph ? (
         <>
           <StatusBar startTime={startTime} onRun={sendGraph} />
           <GraphAndDetail
@@ -74,7 +71,7 @@ export default function App() {
           />
         </>
       ) : (
-        <p>Loading...</p>
+        <p>Waiting for server...</p>
       )}
     </div>
   );

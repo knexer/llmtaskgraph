@@ -2,31 +2,37 @@ import { useEffect, useRef, useState } from "react";
 
 const useWebSocket = (serverUrl) => {
   const [message, setMessage] = useState(null);
+  const [connected, setConnected] = useState(false);
   const wsRef = useRef(null);
 
   useEffect(() => {
-    wsRef.current = new WebSocket(serverUrl);
+    const connect = () => {
+      wsRef.current = new WebSocket(serverUrl);
 
-    wsRef.current.onopen = () => {
-      console.log("Connected to server");
+      wsRef.current.onopen = () => {
+        setConnected(true);
+      };
+
+      wsRef.current.onmessage = (event) => {
+        setMessage(event.data);
+      };
+
+      wsRef.current.onerror = (error) => {};
+
+      wsRef.current.onclose = (event) => {
+        setConnected(false);
+        if (!event.wasClean) {
+          setTimeout(connect, 2000);
+        }
+      };
     };
 
-    wsRef.current.onmessage = (event) => {
-      console.log("Message received");
-      setMessage(event.data);
-    };
+    connect();
 
-    wsRef.current.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
-    wsRef.current.onclose = () => {
-      console.log("Connection closed");
-    };
-
-    // Clean up the connection when the component unmounts
     return () => {
-      wsRef.current.close();
+      if (wsRef.current) {
+        wsRef.current.close(1000, "Intentional close", { wasClean: true });
+      }
     };
   }, [serverUrl]);
 
@@ -38,7 +44,7 @@ const useWebSocket = (serverUrl) => {
     }
   };
 
-  return { message, sendMessage };
+  return { connected, message, sendMessage };
 };
 
 export default useWebSocket;
