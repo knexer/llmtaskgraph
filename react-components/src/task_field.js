@@ -29,7 +29,7 @@ export default function TaskField({ task, fieldName, computedBy, onEdit }) {
   return (
     <div className="task-field">
       <div>
-        Field <b>{fieldName}</b> (computed by <b>{computedBy}</b>):
+        <b>{fieldName}</b> (from <b>{computedBy}</b>):
       </div>
       {editing ? (
         <TaskFieldEditor

@@ -32,6 +32,7 @@ export default function TaskDetail({ graph, task_id, onEdit }) {
         <div className="task-detail-content">
           <TaskField
             task={graph.serialized_graph}
+            computedBy={"user input"}
             fieldName="graph_input"
             onEdit={onEdit}
           />

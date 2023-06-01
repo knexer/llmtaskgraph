@@ -65,7 +65,7 @@ export default class SerializedGraph {
       return TaskState.WAITING;
     }
 
-    const parentTask = getParentTask(task);
+    const parentTask = this.getParentTask(task);
 
     if (parentTask) {
       return parentTask.graph_input === null
