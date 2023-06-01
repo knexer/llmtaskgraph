@@ -37,6 +37,8 @@ The most basic usage of llmtaskgraph (implemented in example_app) looks like thi
 5. Back in Python-land, deserialize the modified trace into a new TaskGraph.
 6. Repeat from step 2.
 
+See the readmes in each component for more usage info.
+
 ## Roadmap
 
 - Support for non-OpenAI LLMs
