@@ -66,7 +66,7 @@ export default function App() {
         <>
           <StatusBar startTime={startTime} onRun={sendGraph} />
           <GraphAndDetail
-            serialized_graph={serializedGraph}
+            serializedGraph={serializedGraph}
             onEdit={handleEdit}
           />
         </>

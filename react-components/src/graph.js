@@ -11,11 +11,11 @@ const nodeTypes = {
 };
 
 export default function Graph({
-  serialized_graph,
-  selected_task_id,
-  select_task_id,
+  serializedGraph,
+  selectedTaskId,
+  onTaskSelected,
 }) {
-  const graph = useLayoutedGraph(serialized_graph);
+  const graph = useLayoutedGraph(serializedGraph);
 
   if (!graph) {
     return <div>Loading...</div>;
@@ -24,20 +24,20 @@ export default function Graph({
   const onNodeClick = (_, node) => {
     // Possibly also somehow highlight the selected node?
     // Possibly also highlight related nodes?
-    select_task_id(node.data.task.task_id);
+    onTaskSelected(node.data.task.task_id);
   };
 
   const onPaneClick = (_) => {
-    select_task_id(null);
+    onTaskSelected(null);
   };
 
   // Update each node in graph.nodes based on selected task.
-  const relatedTaskIds = selected_task_id
-    ? serialized_graph.getRelatedTaskIds(selected_task_id)
-    : new Set(serialized_graph.allTasks().map((task) => task.task_id));
+  const relatedTaskIds = selectedTaskId
+    ? serializedGraph.getRelatedTaskIds(selectedTaskId)
+    : new Set(serializedGraph.allTasks().map((task) => task.task_id));
   const nodesWithSelectionState = graph.nodes.map((node) => {
     const selectionState =
-      node.id === selected_task_id
+      node.id === selectedTaskId
         ? "selected"
         : relatedTaskIds.has(node.id)
         ? "related"
