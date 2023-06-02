@@ -2,30 +2,27 @@ import React, { useState, useEffect } from "react";
 import { GraphAndDetail } from "./app/graph_and_detail";
 import { SerializedGraph } from "llmtaskgraph";
 import StatusBar from "./app/status_bar";
-import useWebSocket from "./app/websocket";
+import useSession, { SessionState } from "./app/session";
 
 const serverUrl = "ws://localhost:5678";
 
 export default function App() {
   const [serializedGraph, setSerializedGraph] = useState(null);
-  const { connected, message, sendMessage } = useWebSocket(serverUrl);
+  const { connected, sessionState, graphData, sendGraphData } =
+    useSession(serverUrl);
   const [startTime, setStartTime] = useState(null);
 
   useEffect(() => {
-    if (message) {
-      const parsedMessage = JSON.parse(message);
-      const backendState = parsedMessage.backend_state;
-
-      if (backendState === "RUNNING" && startTime === null) {
+    if (graphData) {
+      if (sessionState === SessionState.RUNNING && startTime === null) {
         setStartTime(new Date());
-      } else if (backendState === "DONE") {
+      } else if (sessionState === SessionState.EDITING) {
         setStartTime(null);
       }
 
-      const graph = parsedMessage.graph;
-      setSerializedGraph(new SerializedGraph(graph));
+      setSerializedGraph(new SerializedGraph(graphData));
     }
-  }, [message]);
+  }, [graphData]);
 
   const handleEdit = (taskId, fieldName, fieldData) => {
     // Deep copy the serialized graph
@@ -57,7 +54,7 @@ export default function App() {
   };
 
   const sendGraph = () => {
-    sendMessage(JSON.stringify(serializedGraph.graphData));
+    sendGraphData(serializedGraph.graphData);
   };
 
   return (

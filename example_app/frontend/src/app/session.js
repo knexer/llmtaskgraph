@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 
-const useWebSocket = (serverUrl) => {
-  const [message, setMessage] = useState(null);
+export const SessionState = {
+  EDITING: "EDITING",
+  RUNNING: "RUNNING",
+};
+
+const useSession = (serverUrl) => {
+  const [graphData, setGraphData] = useState(null);
+  const [sessionState, setSessionState] = useState(null);
   const [connected, setConnected] = useState(false);
   const wsRef = useRef(null);
 
@@ -14,7 +20,14 @@ const useWebSocket = (serverUrl) => {
       };
 
       wsRef.current.onmessage = (event) => {
-        setMessage(event.data);
+        const parsedMessage = JSON.parse(event.data);
+        setGraphData(parsedMessage.graph);
+        const backendState = parsedMessage.backend_state;
+        setSessionState(
+          backendState === "RUNNING"
+            ? SessionState.RUNNING
+            : SessionState.EDITING
+        );
       };
 
       wsRef.current.onerror = (error) => {};
@@ -36,15 +49,15 @@ const useWebSocket = (serverUrl) => {
     };
   }, [serverUrl]);
 
-  const sendMessage = (message) => {
+  const sendGraphData = (graphData) => {
     if (wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(message);
+      wsRef.current.send(JSON.stringify(graphData));
     } else {
       console.log("WebSocket is not connected");
     }
   };
 
-  return { connected, message, sendMessage };
+  return { connected, sessionState, graphData, sendGraphData };
 };
 
-export default useWebSocket;
+export default useSession;
