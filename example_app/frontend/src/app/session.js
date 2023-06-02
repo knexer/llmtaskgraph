@@ -5,7 +5,14 @@ export const SessionState = {
   RUNNING: "RUNNING",
 };
 
+export const BackendState = {
+  CONNECTED: "connected",
+  RUNNING: "running",
+  WAITING: "waiting",
+};
+
 const useSession = (serverUrl) => {
+  const [initialGraphData, setInitialGraphData] = useState(null);
   const [graphData, setGraphData] = useState(null);
   const [sessionState, setSessionState] = useState(null);
   const [connected, setConnected] = useState(false);
@@ -21,13 +28,28 @@ const useSession = (serverUrl) => {
 
       wsRef.current.onmessage = (event) => {
         const parsedMessage = JSON.parse(event.data);
-        setGraphData(parsedMessage.graph);
         const backendState = parsedMessage.backend_state;
-        setSessionState(
-          backendState === "RUNNING"
-            ? SessionState.RUNNING
-            : SessionState.EDITING
-        );
+        switch (backendState) {
+          case BackendState.CONNECTED:
+            setSessionState(SessionState.EDITING);
+            setInitialGraphData(parsedMessage.initial_graph);
+            // Set current graph data to parsedMessage.graph only if current graph data is null.
+            // This is to prevent the graph from being reset to initial graph data when the backend is restarted.
+            setGraphData((currentGraphData) =>
+              currentGraphData === null ? parsedMessage.graph : currentGraphData
+            );
+            break;
+          case BackendState.RUNNING:
+            setSessionState(SessionState.RUNNING);
+            setGraphData(parsedMessage.graph);
+            break;
+          case BackendState.WAITING:
+            setSessionState(SessionState.EDITING);
+            setGraphData(parsedMessage.graph);
+            break;
+          default:
+            throw new Error(`Invalid backend state: ${backendState}`);
+        }
       };
 
       wsRef.current.onerror = (error) => {};
@@ -51,13 +73,30 @@ const useSession = (serverUrl) => {
 
   const sendGraphData = (graphData) => {
     if (wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(graphData));
+      wsRef.current.send(
+        JSON.stringify({ command: "START", graph: graphData })
+      );
     } else {
       console.log("WebSocket is not connected");
     }
   };
 
-  return { connected, sessionState, graphData, sendGraphData };
+  const stop = () => {
+    if (wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ command: "STOP", graph: null }));
+    } else {
+      console.log("WebSocket is not connected");
+    }
+  };
+
+  return {
+    connected,
+    sessionState,
+    initialGraphData,
+    graphData,
+    sendGraphData,
+    stop,
+  };
 };
 
 export default useSession;

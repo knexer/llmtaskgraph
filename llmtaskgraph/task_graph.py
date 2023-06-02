@@ -35,6 +35,7 @@ class TaskGraph:
         return GraphContext(self, task)
 
     async def run(self, function_registry: dict[str, Callable]) -> Any:
+        assert not self.started
         self.started = True
         self.function_registry = function_registry
         # Start all initially available tasks.

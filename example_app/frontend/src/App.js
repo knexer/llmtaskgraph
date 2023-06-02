@@ -8,21 +8,29 @@ const serverUrl = "ws://localhost:5678";
 
 export default function App() {
   const [serializedGraph, setSerializedGraph] = useState(null);
-  const { connected, sessionState, graphData, sendGraphData } =
-    useSession(serverUrl);
+  const {
+    connected,
+    sessionState,
+    initialGraphData,
+    graphData,
+    sendGraphData,
+    stop,
+  } = useSession(serverUrl);
   const [startTime, setStartTime] = useState(null);
 
   useEffect(() => {
     if (graphData) {
-      if (sessionState === SessionState.RUNNING && startTime === null) {
-        setStartTime(new Date());
-      } else if (sessionState === SessionState.EDITING) {
-        setStartTime(null);
-      }
-
       setSerializedGraph(new SerializedGraph(graphData));
     }
   }, [graphData]);
+
+  useEffect(() => {
+    if (sessionState === SessionState.RUNNING) {
+      setStartTime(Date.now());
+    } else {
+      setStartTime(null);
+    }
+  }, [sessionState]);
 
   const handleEdit = (taskId, fieldName, fieldData) => {
     // Deep copy the serialized graph
@@ -57,11 +65,20 @@ export default function App() {
     sendGraphData(serializedGraph.graphData);
   };
 
+  const reset = () => {
+    sendGraphData(initialGraphData);
+  };
+
   return (
     <div className="app">
       {connected && serializedGraph ? (
         <>
-          <StatusBar startTime={startTime} onRun={sendGraph} />
+          <StatusBar
+            startTime={startTime}
+            onRun={sendGraph}
+            onStop={stop}
+            onReset={reset}
+          />
           <GraphAndDetail
             serializedGraph={serializedGraph}
             onEdit={handleEdit}
