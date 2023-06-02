@@ -65,6 +65,7 @@ export default function App() {
           <GraphAndDetail
             serializedGraph={serializedGraph}
             onEdit={handleEdit}
+            editEnabled={sessionState === SessionState.EDITING}
           />
         </>
       ) : (

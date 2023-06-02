@@ -3,7 +3,13 @@ import React, { useEffect, useRef } from "react";
 import JSONEditor from "jsoneditor";
 import "jsoneditor/dist/jsoneditor.css";
 
-export default function TaskField({ task, fieldName, computedBy, onEdit }) {
+export default function TaskField({
+  task,
+  fieldName,
+  computedBy,
+  onEdit,
+  editEnabled,
+}) {
   const [editing, setEditing] = React.useState(false);
 
   const handleEdit = () => {
@@ -31,7 +37,7 @@ export default function TaskField({ task, fieldName, computedBy, onEdit }) {
       <div>
         <b>{fieldName}</b> (from <b>{computedBy}</b>):
       </div>
-      {editing ? (
+      {editEnabled && editing ? (
         <TaskFieldEditor
           task={task}
           fieldName={fieldName}
@@ -41,10 +47,10 @@ export default function TaskField({ task, fieldName, computedBy, onEdit }) {
       ) : (
         <>
           <div>{elide(JSON.stringify(task[fieldName]))}</div>
-          <button onClick={handleEdit}>Edit</button>
-          {task[fieldName] !== null ? (
+          {editEnabled && <button onClick={handleEdit}>Edit</button>}
+          {editEnabled && task[fieldName] !== null && (
             <button onClick={handleDelete}>Clear</button>
-          ) : null}
+          )}
         </>
       )}
     </div>

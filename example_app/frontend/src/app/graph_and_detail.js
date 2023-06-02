@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { Graph, TaskDetail } from "llmtaskgraph";
 
-export function GraphAndDetail({ serializedGraph, onEdit }) {
+export function GraphAndDetail({ serializedGraph, onEdit, editEnabled }) {
   const [selectedTaskId, updateSelectedTaskId] = useState(null);
 
   return (
@@ -17,6 +17,7 @@ export function GraphAndDetail({ serializedGraph, onEdit }) {
         graph={serializedGraph}
         taskId={selectedTaskId}
         onEdit={onEdit}
+        editEnabled={editEnabled}
       />
     </div>
   );
