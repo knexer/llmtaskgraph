@@ -49,7 +49,13 @@ class TaskGraph:
             for task in self.tasks
         ):
             # wait for every started task to be done
-            await asyncio.wait([task.output for task in self.tasks])
+            try:
+                await asyncio.wait([task.output for task in self.tasks])
+            except asyncio.CancelledError:
+                # If we're cancelled, cancel all tasks.
+                for task in self.tasks:
+                    task.output.cancel()
+                raise
 
         # If any task has an exception, raise it.
         for task in self.tasks:
