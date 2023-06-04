@@ -11,6 +11,8 @@ class WebSocketServer:
         self.state = "waiting"
         self.task_graph: TaskGraph = initial_task_graph
         self.function_registry = function_registry
+        self.graph_exec = None
+        self.recv = None
 
     async def server(self, websocket, path):
         print("Client connected.")
@@ -30,34 +32,39 @@ class WebSocketServer:
             # Has two modes depending on current state:
             if self.state == "waiting":
                 # wait for a start message with an updated task graph
+                print("Waiting for updated task graph...")
                 await self.get_updated_graph(websocket)
-                print("Updated task graph received, running...")
                 self.state = "running"
             elif self.state == "running":
                 # run TaskGraph until it is complete or a stop message is received, sending realtime updates to the client
+                print("Running task graph...")
                 await self.execute_current_graph(websocket)
-                print("Task graph completed, waiting for new graph...")
                 self.state = "waiting"
                 await self.send_graph(websocket, self.state, self.task_graph)
 
     async def execute_current_graph(self, websocket):
-        # Start the current task graph
-        graph_exec = asyncio.create_task(self.task_graph.run(self.function_registry))
+        # Start the current task graph, if it isn't already running
+        if not self.graph_exec:
+            self.graph_exec = asyncio.create_task(
+                self.task_graph.run(self.function_registry)
+            )
         # Also listen for a stop message
-        recv = asyncio.create_task(websocket.recv())
+        self.recv = asyncio.create_task(websocket.recv())
 
-        while not graph_exec.done() and not recv.done():
+        while not self.graph_exec.done() and not self.recv.done():
             # Wait one second or until something happens
             await asyncio.wait(
-                [recv, graph_exec], timeout=1, return_when=asyncio.FIRST_COMPLETED
+                [self.recv, self.graph_exec],
+                timeout=1,
+                return_when=asyncio.FIRST_COMPLETED,
             )
 
-            if recv.done():
+            if self.recv.done():
                 # We must have received a stop message. Cancel the task graph and break out of the loop.
-                message_data = json.loads(await recv)
+                message_data = json.loads(await self.recv)
                 assert message_data["command"] == "STOP"
 
-                graph_exec.cancel()
+                self.graph_exec.cancel()
                 self.task_graph = (
                     TaskGraph.from_json(message_data["graph"])
                     if message_data["graph"]
@@ -70,15 +77,18 @@ class WebSocketServer:
             await self.send_graph(websocket, self.state, self.task_graph)
             print("Task graph update sent.")
 
-        if graph_exec.done() and graph_exec.exception() is not None:
+        if self.graph_exec.done() and self.graph_exec.exception() is not None:
             print("Task graph failed.")
 
-        if not recv.done():
-            recv.cancel()
+        if not self.recv.done():
+            self.recv.cancel()
             try:
-                await recv
+                await self.recv
             except asyncio.CancelledError:
                 pass
+
+        self.graph_exec = None
+        self.recv = None
 
     async def send_graph(self, websocket, state, graph: TaskGraph):
         await websocket.send(
