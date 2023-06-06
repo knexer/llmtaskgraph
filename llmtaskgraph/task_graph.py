@@ -2,6 +2,7 @@ import asyncio
 from typing import Any, Optional, Callable
 
 from .task import Task
+from .function_registry import make_base_function_registry
 
 
 class TaskGraph:
@@ -37,11 +38,13 @@ class TaskGraph:
     async def run(self, function_registry: dict[str, Callable]) -> Any:
         assert not self.started
         self.started = True
-        self.function_registry = function_registry
+        self.function_registry = function_registry.copy()
+        self.function_registry.update(make_base_function_registry())
+
         # Start all initially available tasks.
         # N.B.: Tasks added during execution will be started by add_task.
         for task in self.tasks:
-            task.output = asyncio.create_task(task.run(self, function_registry))
+            task.output = asyncio.create_task(task.run(self, self.function_registry))
 
         # while any task is not started or not done, and no tasks have exceptions
         while any(not task.output.done() for task in self.tasks) and not any(

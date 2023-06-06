@@ -1,13 +1,10 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from asyncio import Future
-import asyncio
 import inspect
 import traceback
 from typing import Any, Optional
 from uuid import uuid4
-import openai
-import json
 
 from typing import TYPE_CHECKING, Callable, Union
 
@@ -134,6 +131,7 @@ class LLMTask(Task):
     def __init__(
         self,
         prompt_formatter_id: str,
+        api_handler_id: str,
         params: Any,
         output_parser_id: str,
         *deps: Union[Task, str],
@@ -141,6 +139,7 @@ class LLMTask(Task):
     ):
         super().__init__(*deps, **kwdeps)
         self.prompt_formatter_id = prompt_formatter_id
+        self.api_handler_id = api_handler_id
         self.params = params
         self.output_parser_id = output_parser_id
         self.formatted_prompt = None
@@ -158,30 +157,17 @@ class LLMTask(Task):
                 context, *dep_results, **kwdep_results
             )
         if self.response is None:
-            self.response = await self.api_call(self.formatted_prompt)
-        # Todo: retry api call and parsing if output is None
+            self.response = await function_registry[self.api_handler_id](
+                self.formatted_prompt, self.params
+            )
         return function_registry[self.output_parser_id](context, self.response)
-
-    async def api_call(self, messages):
-        # make sure messages is a list of objects with role and content keys
-        if not isinstance(messages, list):
-            if isinstance(messages, str):
-                messages = {"role": "user", "content": messages}
-            messages = [messages]
-
-        # Todo: handle api calls elsewhere for request batching and retries
-        response: Any = await openai.ChatCompletion.acreate(
-            messages=messages,
-            **self.params,
-        )
-        # Todo: handle n > 1
-        return response.choices[0].message.content
 
     def to_json(self):
         json = super().to_json()
         json.update(
             {
                 "prompt_formatter_id": self.prompt_formatter_id,
+                "api_handler_id": self.api_handler_id,
                 "params": self.params,
                 "output_parser_id": self.output_parser_id,
                 "formatted_prompt": self.formatted_prompt,
@@ -194,6 +180,7 @@ class LLMTask(Task):
     def from_json(cls, json: dict[str, Any]) -> LLMTask:
         task = cls(
             json.pop("prompt_formatter_id"),
+            json.pop("api_handler_id"),
             json.pop("params"),
             json.pop("output_parser_id"),
         )
