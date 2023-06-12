@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any, Optional, Callable
 
-from .task import Task
+from .task import Task, task_from_json
 from .function_registry import make_base_function_registry
 
 
@@ -88,7 +88,7 @@ class TaskGraph:
         graph = TaskGraph()
         graph.tasks = []
         for task_json in json["tasks"]:
-            task = Task.from_json(task_json)
+            task = task_from_json(task_json)
             task.hydrate_deps(graph.tasks, None)
             graph.tasks.append(task)
         graph.graph_input = json["graph_input"]

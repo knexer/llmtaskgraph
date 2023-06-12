@@ -85,14 +85,12 @@ class Task(ABC):
                 return dep
 
         def get_exception_str(future: Optional[Future[Any]]) -> Optional[str]:
-            if future is not None and future.done() and future.exception() is not None:
-                return "".join(
-                    traceback.TracebackException.from_exception(
-                        future.exception()
-                    ).format()
-                )
-            else:
+            if future is None or not future.done():
                 return None
+            e = future.exception()
+            if e is None:
+                return None
+            return "".join(traceback.TracebackException.from_exception(e).format())
 
         return {
             "type": self.__class__.__name__,
@@ -108,15 +106,7 @@ class Task(ABC):
     @classmethod
     @abstractmethod
     def from_json(cls, json: dict[str, Any]) -> Task:
-        # TODO handle this in an extensible way
-        task_types = {
-            "LLMTask": LLMTask,
-            "PythonTask": PythonTask,
-            "TaskGraphTask": TaskGraphTask,
-        }
-
-        task_type = json.pop("type")
-        return task_types[task_type].from_json(json)
+        pass
 
     def init_from_json(self, json: dict[str, Any]) -> None:
         self.task_id = json["task_id"]
@@ -280,3 +270,15 @@ class TaskGraphTask(Task):
         task.init_from_json(json)
         task.graph_input = json.pop("graph_input")
         return task
+
+
+def task_from_json(json: dict[str, Any]) -> Task:
+    # TODO handle this in an extensible way
+    task_types = {
+        "LLMTask": LLMTask,
+        "PythonTask": PythonTask,
+        "TaskGraphTask": TaskGraphTask,
+    }
+
+    task_type = json.pop("type")
+    return task_types[task_type].from_json(json)
