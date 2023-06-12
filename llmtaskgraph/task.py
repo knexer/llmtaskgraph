@@ -20,7 +20,7 @@ class Task(ABC):
         self.kwdeps = kwdeps
         self.created_by: Optional[Union[Task, str]] = None
         self.output_data: Optional[Any] = None
-        self.output: Optional[Future] = None
+        self.output: Optional[Future[Any]] = None
 
     @property
     def dependencies(self) -> tuple[Union[Task, str], ...]:
@@ -43,7 +43,7 @@ class Task(ABC):
             self.created_by = created_by
 
     async def run(
-        self, graph: TaskGraph, function_registry: dict[str, Callable]
+        self, graph: TaskGraph, function_registry: dict[str, Callable[..., Any]]
     ) -> None:
         # Memoize output.
         if self.output_data is not None:
@@ -52,10 +52,10 @@ class Task(ABC):
         # Collect dependency output. We know tasks are actual Tasks with output futures at this point.
         try:
             dep_results: list[Any] = [await dep.output for dep in self.deps]  # type: ignore
-            kwdep_results = {
+            kwdep_results: dict[str, Any] = {
                 kwdep_name: await kwdep.output for kwdep_name, kwdep in self.kwdeps.items()  # type: ignore
             }
-        except Exception as e:
+        except Exception:
             # If any dependency failed, silently abort. The exception will be handled by the TaskGraph.
             return None
 
@@ -70,7 +70,7 @@ class Task(ABC):
     async def execute(
         self,
         context: GraphContext,
-        function_registry: dict[str, Callable],
+        function_registry: dict[str, Callable[..., Any]],
         *dep_results: tuple[Any],
         **kwdep_results: dict[str, Any],
     ):
@@ -84,7 +84,7 @@ class Task(ABC):
             else:
                 return dep
 
-        def get_exception_str(future: Future) -> Optional[str]:
+        def get_exception_str(future: Optional[Future[Any]]) -> Optional[str]:
             if future is not None and future.done() and future.exception() is not None:
                 return "".join(
                     traceback.TracebackException.from_exception(
@@ -148,7 +148,7 @@ class LLMTask(Task):
     async def execute(
         self,
         context: GraphContext,
-        function_registry: dict[str, Callable],
+        function_registry: dict[str, Callable[..., Any]],
         *dep_results: tuple[Any],
         **kwdep_results: dict[str, Any],
     ):
@@ -200,7 +200,7 @@ class PythonTask(Task):
     async def execute(
         self,
         context: GraphContext,
-        function_registry: dict[str, Callable],
+        function_registry: dict[str, Callable[..., Any]],
         *dep_results: tuple[Any],
         **kwdep_results: dict[str, Any],
     ):
@@ -244,7 +244,7 @@ class TaskGraphTask(Task):
     async def execute(
         self,
         context: GraphContext,
-        function_registry: dict[str, Callable],
+        function_registry: dict[str, Callable[..., Any]],
         *dep_results: tuple[Any],
         **kwdep_results: dict[str, Any],
     ):

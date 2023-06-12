@@ -13,7 +13,7 @@ class TaskGraph:
 
         # transient state during run
         self.started = False
-        self.function_registry: Optional[dict[str, Callable]] = None
+        self.function_registry: Optional[dict[str, Callable[..., Any]]] = None
 
     def add_task(self, task: Task) -> str:
         for dependency in task.dependencies:
@@ -35,7 +35,7 @@ class TaskGraph:
     def make_context_for(self, task: Task):
         return GraphContext(self, task)
 
-    async def run(self, function_registry: dict[str, Callable]) -> Any:
+    async def run(self, function_registry: dict[str, Callable[..., Any]]) -> Any:
         assert not self.started
         self.started = True
         self.function_registry = function_registry.copy()
