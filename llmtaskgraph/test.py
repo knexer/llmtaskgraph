@@ -2,110 +2,107 @@ import asyncio
 import json
 import re
 import os
+from typing import Any, Callable
 from dotenv import load_dotenv
 
 import openai
 
 from .task import LLMTask, PythonTask
-from .task_graph import TaskGraph
+from .task_graph import TaskGraph, GraphContext
 
 load_dotenv()
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
-
-def prompt(_):
-    print("ran prompt")
-    return "Give a numbered list of five fast food items."
-
-
-def parse_ideas(_, response):
-    print("ran parse_ideas")
-    # The regular expression pattern:
-    # It looks for a number followed by a '.', ':', or ')' (with optional spaces)
-    # and then captures any text until it finds a newline character or the end of the string
-    pattern = re.compile(r"\d[\.\:\)]\s*(.*?)(?=\n\d|$)", re.MULTILINE)
-
-    # Find all matches using the 'findall' method
-    matches = pattern.findall(response)
-
-    # Return the matches
-    return matches
-
-
-def join_ideas(_, *ideas):
-    print("ran join_ideas")
-    # ideas is a map from task id to an array of ideas
-    all_ideas = []
-    for ideas in ideas:
-        all_ideas = all_ideas + ideas
-    return all_ideas
-
-
+# A TaskGraph is an executable collection of tasks with modeled information flow
 task_graph = TaskGraph()
-function_registry = {}
-function_registry["prompt"] = prompt
-function_registry["parse_ideas"] = parse_ideas
-llm_tasks = [
-    LLMTask(
-        "prompt", {"model": "gpt-3.5-turbo", "n": 1, "temperature": 1}, "parse_ideas"
-    )
-    for _ in range(3)
-]
+# A function registry holds the actual code used by tasks, to facilitate serialization
+function_registry: dict[str, Callable[..., Any]] = {}
 
-for task in llm_tasks:
-    task_graph.add_task(task)
 
-function_registry["join_ideas"] = join_ideas
-join_task = PythonTask("join_ideas", *llm_tasks)
-task_graph.add_output_task(join_task)
+# LLMTasks can be used to call the OpenAI API
+def add_llm_tasks():
+    def format_prompt(context: GraphContext):
+        return f"Give a numbered list of five {context.graph_input()}."
+
+    # Parse the response
+    def parse_response(_: GraphContext, response: str):
+        # Parse out the list of things from the response (a numbered list)
+        pattern = re.compile(r"\d[\.\:\)]\s*(.*?)(?=\n\d|$)", re.MULTILINE)
+        matches = pattern.findall(response)
+
+        return matches
+
+    function_registry["format_prompt"] = format_prompt
+    function_registry["parse_response"] = parse_response
+
+    llm_tasks = [
+        LLMTask(
+            "format_prompt",
+            "openai_chat",
+            {"model": "gpt-3.5-turbo", "n": 1, "temperature": 1},
+            "parse_response",
+        )
+        for _ in range(3)
+    ]
+
+    for task in llm_tasks:
+        task_graph.add_task(task)
+
+    return llm_tasks
+
 
 nested_task_ran = False
 
 
-def nested_task(_):
-    global nested_task_ran
-    nested_task_ran = True
-    print("nested task ran")
-    return "nested task ran"
+# PythonTasks can be used to run arbitrary Python code in the task graph
+def add_python_tasks(llm_tasks: list[LLMTask]):
+    def join_things(_: GraphContext, *things_lists: list[str]):
+        all_things: list[str] = []
+        for things_list in things_lists:
+            all_things = all_things + things_list
+        return all_things
+
+    function_registry["join_things"] = join_things
+    join_task = PythonTask("join_things", *llm_tasks)
+    task_graph.add_output_task(join_task)
+
+    def nested_task(_: GraphContext):
+        global nested_task_ran
+        nested_task_ran = True
+        return "nested task ran"
+
+    # Tasks can be added during execution
+    def add_nested_task(context: GraphContext):
+        context.add_task(PythonTask("nested_task"))
+        return "nested task created"
+
+    function_registry["nested_task"] = nested_task
+    function_registry["add_nested_task"] = add_nested_task
+    task_graph.add_task(PythonTask("add_nested_task"))
 
 
-# create a task that creates other tasks
-def add_nested_task(context):
-    print("ran add_nested_task")
+task_graph.graph_input = "famous mathematicians"
+llm_tasks = add_llm_tasks()
+add_python_tasks(llm_tasks)
 
-    context.add_task(PythonTask("nested_task"))
-    print("nested task created")
-    return "nested task created"
-
-
-function_registry["nested_task"] = nested_task
-function_registry["add_nested_task"] = add_nested_task
-task_graph.add_task(PythonTask("add_nested_task"))
-
-
-# create a task that throws an exception
-def throw_exception(_):
-    raise Exception("test exception")
-
-
-function_registry["throw_exception"] = throw_exception
-task_graph.add_task(PythonTask("throw_exception"))
-
-print("serializing task graph")
+# Task graphs can be serialized and deserialized
 serialized = json.dumps(task_graph.to_json())
-print(serialized)
-task_graph_2: TaskGraph = TaskGraph.from_json(json.loads(serialized))
+task_graph = TaskGraph.from_json(json.loads(serialized))
 
-print("running task graph")
-output = asyncio.run(task_graph_2.run(function_registry))
+output: list[str] = asyncio.run(task_graph.run(function_registry))
 assert nested_task_ran
+# The output of the task graph is the output of its output_task
+assert len(output) == 15
+assert output.count("Isaac Newton") > 0
+
+# Task graphs keep their execution state when serialized and deserialized
 nested_task_ran = False
+serialized_2 = json.dumps(task_graph.to_json())
+assert serialized != serialized_2
+task_graph = TaskGraph.from_json(json.loads(serialized_2))
+output_2 = asyncio.run(task_graph.run(function_registry))
 
-print(output)
-serialized_2 = json.dumps(task_graph_2.to_json())
-print(serialized_2)
-task_graph_3: TaskGraph = TaskGraph.from_json(json.loads(serialized_2))
-output_2 = asyncio.run(task_graph_3.run(function_registry))
-
+# So already executed tasks don't run again
 assert not nested_task_ran
+# And the output is the same
 assert output == output_2
