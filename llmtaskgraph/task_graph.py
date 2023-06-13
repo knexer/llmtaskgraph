@@ -46,26 +46,32 @@ class TaskGraph:
         for task in self.tasks:
             task.output = asyncio.create_task(task.run(self, self.function_registry))
 
+        def cancel_all_tasks():
+            for task in self.tasks:
+                assert task.output is not None
+                task.output.cancel()
+
         # while any task is not started or not done, and no tasks have exceptions
-        while any(not task.output.done() for task in self.tasks) and not any(
-            task.output.done() and task.output.exception() is not None
+        while any(
+            task.output and not task.output.done() for task in self.tasks
+        ) and not any(
+            task.output and task.output.done() and task.output.exception() is not None
             for task in self.tasks
         ):
             # wait for every started task to be done
             try:
-                await asyncio.wait([task.output for task in self.tasks])
+                await asyncio.wait(
+                    [task.output for task in self.tasks if task.output is not None]
+                )
             except asyncio.CancelledError:
-                # If we're cancelled, cancel all tasks.
-                for task in self.tasks:
-                    task.output.cancel()
+                cancel_all_tasks()
                 raise
 
         # If any task has an exception, raise it.
         for task in self.tasks:
+            assert task.output is not None
             if task.output.done() and task.output.exception() is not None:
-                for task in self.tasks:
-                    task.output.cancel()
-
+                cancel_all_tasks()
                 raise Exception("Subtask failed.") from task.output.exception()
 
         self.started = False

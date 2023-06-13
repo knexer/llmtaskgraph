@@ -26,7 +26,7 @@ class OpenAiChatApiHandler:
             messages = [messages]
 
         # Todo: handle api calls elsewhere for request batching and retries
-        response: Any = await openai.ChatCompletion.acreate(
+        response: Any = await openai.ChatCompletion.acreate(  # type: ignore
             messages=messages,
             **params,
         )
