@@ -94,8 +94,8 @@ class TaskGraph:
         graph = TaskGraph()
         graph.tasks = []
         for task_json in json["tasks"]:
-            task = task_from_json(task_json)
-            task.hydrate_deps(graph.tasks, None)
+            tasks_by_id = {task.task_id: task for task in graph.tasks}
+            task = task_from_json(task_json, tasks_by_id)
             graph.tasks.append(task)
         graph.graph_input = json["graph_input"]
         graph.output_task = next(
@@ -113,9 +113,9 @@ class GraphContext:
         return self.graph.graph_input
 
     def add_task(self, new_task: Task):
-        new_task.hydrate_deps(self.graph.tasks, self.task)
+        # todo new_task.hydrate_deps(self.graph.tasks, self.task)
         return self.graph.add_task(new_task)
 
     def add_output_task(self, new_task: Task):
-        new_task.hydrate_deps(self.graph.tasks, self.task)
+        # todo new_task.hydrate_deps(self.graph.tasks, self.task)
         return self.graph.add_output_task(new_task)

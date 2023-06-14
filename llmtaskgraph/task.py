@@ -6,7 +6,7 @@ import traceback
 from typing import Any, Optional
 from uuid import uuid4
 
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     from .task_graph import GraphContext
@@ -14,33 +14,21 @@ if TYPE_CHECKING:
 
 
 class Task(ABC):
-    def __init__(self, *deps: Union[Task, str], **kwdeps: Union[Task, str]):
+    def __init__(self, *deps: Task, **kwdeps: Task):
         self.task_id = str(uuid4())
-        self.deps: tuple[Union[Task, str], ...] = deps
+        self.deps: tuple[Task, ...] = deps
         self.kwdeps = kwdeps
-        self.created_by: Optional[Union[Task, str]] = None
+        self.created_by: Optional[Task] = None
         self.output_data: Optional[Any] = None
         self.output: Optional[Future[Any]] = None
 
     @property
-    def dependencies(self) -> tuple[Union[Task, str], ...]:
+    def dependencies(self) -> tuple[Task, ...]:
         declared_deps = self.deps + tuple(self.kwdeps.values())
         if self.created_by:
             return declared_deps + (self.created_by,)
         else:
             return declared_deps
-
-    def hydrate_deps(self, tasks: list[Task], created_by: Optional[Task]):
-        tasks_by_id = {task.task_id: task for task in tasks}
-        self.deps = tuple(tasks_by_id[dep_id] for dep_id in self.deps)
-        self.kwdeps = {
-            kwdep_name: tasks_by_id[kwdep_id]
-            for kwdep_name, kwdep_id in self.kwdeps.items()
-        }
-        if self.created_by:
-            self.created_by = tasks_by_id[self.created_by]
-        else:
-            self.created_by = created_by
 
     async def run(
         self, graph: TaskGraph, function_registry: dict[str, Callable[..., Any]]
@@ -78,11 +66,8 @@ class Task(ABC):
 
     @abstractmethod
     def to_json(self) -> dict[str, Any]:
-        def get_id(dep: Union[Task, str]) -> str:
-            if isinstance(dep, Task):
-                return dep.task_id
-            else:
-                return dep
+        def get_id(dep: Task) -> str:
+            return dep.task_id
 
         def get_exception_str(future: Optional[Future[Any]]) -> Optional[str]:
             if future is None or not future.done():
@@ -105,14 +90,20 @@ class Task(ABC):
 
     @classmethod
     @abstractmethod
-    def from_json(cls, json: dict[str, Any]) -> Task:
+    def from_json(cls, json: dict[str, Any], tasks: dict[str, Task]) -> Task:
         pass
 
-    def init_from_json(self, json: dict[str, Any]) -> None:
+    def init_from_json(self, json: dict[str, Any], tasks: dict[str, Task]) -> None:
         self.task_id = json["task_id"]
-        self.deps = json["deps"]
-        self.kwdeps = json["kwdeps"]
-        self.created_by = json["created_by"]
+        self.deps = tuple(tasks[dep_id] for dep_id in json["deps"])
+        self.kwdeps = {
+            kwdep_name: tasks[kwdep_id]
+            for kwdep_name, kwdep_id in json["kwdeps"].items()
+        }
+        if json["created_by"]:
+            self.created_by = tasks[json["created_by"]]
+        else:
+            self.created_by = None
         # TODO may need to do something fancier at some point to handle custom types in output_data
         self.output_data = json["output_data"]
 
@@ -124,8 +115,8 @@ class LLMTask(Task):
         api_handler_id: str,
         params: Any,
         output_parser_id: str,
-        *deps: Union[Task, str],
-        **kwdeps: Union[Task, str],
+        *deps: Task,
+        **kwdeps: Task,
     ):
         super().__init__(*deps, **kwdeps)
         self.prompt_formatter_id = prompt_formatter_id
@@ -167,23 +158,21 @@ class LLMTask(Task):
         return json
 
     @classmethod
-    def from_json(cls, json: dict[str, Any]) -> LLMTask:
+    def from_json(cls, json: dict[str, Any], tasks: dict[str, Task]) -> LLMTask:
         task = cls(
             json.pop("prompt_formatter_id"),
             json.pop("api_handler_id"),
             json.pop("params"),
             json.pop("output_parser_id"),
         )
-        task.init_from_json(json)
+        task.init_from_json(json, tasks)
         task.formatted_prompt = json.pop("formatted_prompt")
         task.response = json.pop("response")
         return task
 
 
 class PythonTask(Task):
-    def __init__(
-        self, callback_id: str, *deps: Union[Task, str], **kwdeps: Union[Task, str]
-    ):
+    def __init__(self, callback_id: str, *deps: Task, **kwdeps: Task):
         super().__init__(*deps, **kwdeps)
         self.callback_id = callback_id
 
@@ -210,11 +199,11 @@ class PythonTask(Task):
         return json
 
     @classmethod
-    def from_json(cls, json: dict[str, Any]) -> PythonTask:
+    def from_json(cls, json: dict[str, Any], tasks: dict[str, Task]) -> PythonTask:
         task = cls(
             json.pop("callback_id"),
         )
-        task.init_from_json(json)
+        task.init_from_json(json, tasks)
         return task
 
 
@@ -223,8 +212,8 @@ class TaskGraphTask(Task):
         self,
         subgraph: "TaskGraph",
         input_formatter_id: str,
-        *deps: Union[Task, str],
-        **kwdeps: Union[Task, str],
+        *deps: Task,
+        **kwdeps: Task,
     ):
         super().__init__(*deps, **kwdeps)
         self.subgraph = subgraph
@@ -258,7 +247,7 @@ class TaskGraphTask(Task):
         return json
 
     @classmethod
-    def from_json(cls, json: dict[str, Any]) -> TaskGraphTask:
+    def from_json(cls, json: dict[str, Any], tasks: dict[str, Task]) -> TaskGraphTask:
         from llmtaskgraph.task_graph import (
             TaskGraph,
         )  # Import here to avoid circular dependency
@@ -267,12 +256,12 @@ class TaskGraphTask(Task):
             TaskGraph.from_json(json.pop("subgraph")),
             json.pop("input_formatter_id"),
         )
-        task.init_from_json(json)
+        task.init_from_json(json, tasks)
         task.graph_input = json.pop("graph_input")
         return task
 
 
-def task_from_json(json: dict[str, Any]) -> Task:
+def task_from_json(json: dict[str, Any], tasks: dict[str, Task]) -> Task:
     # TODO handle this in an extensible way
     task_types = {
         "LLMTask": LLMTask,
@@ -281,4 +270,4 @@ def task_from_json(json: dict[str, Any]) -> Task:
     }
 
     task_type = json.pop("type")
-    return task_types[task_type].from_json(json)
+    return task_types[task_type].from_json(json, tasks)
