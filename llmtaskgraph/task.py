@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from asyncio import Future
 import inspect
 import traceback
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from uuid import uuid4
 
 from typing import TYPE_CHECKING, Callable
@@ -11,6 +11,9 @@ from typing import TYPE_CHECKING, Callable
 if TYPE_CHECKING:
     from .task_graph import GraphContext
     from .task_graph import TaskGraph
+
+JSON = dict[str, "JSONValue"]
+JSONValue = Union[JSON, list["JSONValue"], str, int, float, bool, None]
 
 
 class Task(ABC):
@@ -65,7 +68,7 @@ class Task(ABC):
         pass
 
     @abstractmethod
-    def to_json(self) -> dict[str, Any]:
+    def to_json(self) -> JSON:
         def get_id(dep: Task) -> str:
             return dep.task_id
 
@@ -143,7 +146,7 @@ class LLMTask(Task):
             )
         return function_registry[self.output_parser_id](context, self.response)
 
-    def to_json(self):
+    def to_json(self) -> JSON:
         json = super().to_json()
         json.update(
             {
@@ -189,7 +192,7 @@ class PythonTask(Task):
         else:
             return callback(context, *dep_results, **kwdep_results)
 
-    def to_json(self):
+    def to_json(self) -> JSON:
         json = super().to_json()
         json.update(
             {
@@ -235,7 +238,7 @@ class TaskGraphTask(Task):
         self.subgraph.graph_input = self.graph_input
         return await self.subgraph.run(function_registry)
 
-    def to_json(self):
+    def to_json(self) -> JSON:
         json = super().to_json()
         json.update(
             {

@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any, Optional, Callable
 
-from .task import Task, task_from_json
+from .task import JSON, Task, task_from_json
 from .function_registry import make_base_function_registry
 
 
@@ -82,7 +82,7 @@ class TaskGraph:
         assert self.output_task.output is not None
         return await self.output_task.output
 
-    def to_json(self):
+    def to_json(self) -> JSON:
         return {
             "tasks": [task.to_json() for task in self.tasks],
             "graph_input": self.graph_input,
