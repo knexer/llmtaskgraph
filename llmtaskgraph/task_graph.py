@@ -112,10 +112,11 @@ class GraphContext:
     def graph_input(self):
         return self.graph.graph_input
 
+    def list_tasks(self):
+        return self.graph.tasks
+
     def add_task(self, new_task: Task):
-        # todo new_task.hydrate_deps(self.graph.tasks, self.task)
         return self.graph.add_task(new_task)
 
     def add_output_task(self, new_task: Task):
-        # todo new_task.hydrate_deps(self.graph.tasks, self.task)
         return self.graph.add_output_task(new_task)

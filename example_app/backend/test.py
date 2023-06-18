@@ -1,6 +1,3 @@
-import asyncio
-import json
-import re
 import os
 from dotenv import load_dotenv
 
@@ -8,7 +5,7 @@ import openai
 
 from .server import WebSocketServer
 from llmtaskgraph.task import PythonTask
-from llmtaskgraph.task_graph import TaskGraph
+from llmtaskgraph.task_graph import GraphContext, TaskGraph
 
 load_dotenv()
 openai.api_key = os.environ["OPENAI_API_KEY"]
@@ -25,7 +22,7 @@ def nested_task(_):
 
 
 # create a task that creates other tasks
-def add_nested_task(context):
+def add_nested_task(context: GraphContext):
     print("ran add_nested_task")
 
     context.add_task(PythonTask("nested_task"))
