@@ -2,10 +2,11 @@ import asyncio
 import json
 import re
 import os
-from typing import Any, Callable
 from dotenv import load_dotenv
 
 import openai
+
+from llmtaskgraph.function_registry import FunctionRegistry, openai_chat
 
 from .task import LLMTask, PythonTask
 from .task_graph import TaskGraph, GraphContext
@@ -16,7 +17,7 @@ openai.api_key = os.environ["OPENAI_API_KEY"]
 # A TaskGraph is an executable collection of tasks with modeled information flow
 task_graph = TaskGraph()
 # A function registry holds the actual code used by tasks, to facilitate serialization
-function_registry: dict[str, Callable[..., Any]] = {}
+function_registry = FunctionRegistry()
 
 
 # LLMTasks can be used to call the OpenAI API
@@ -32,15 +33,15 @@ def add_llm_tasks():
 
         return matches
 
-    function_registry["format_prompt"] = format_prompt
-    function_registry["parse_response"] = parse_response
+    format_prompt_id = function_registry.register(format_prompt)
+    parse_response_id = function_registry.register(parse_response)
 
     llm_tasks = [
         LLMTask(
-            "format_prompt",
-            "openai_chat",
+            format_prompt_id,
+            openai_chat,
             {"model": "gpt-3.5-turbo", "n": 1, "temperature": 1},
-            "parse_response",
+            parse_response_id,
         )
         for _ in range(3)
     ]
@@ -62,8 +63,8 @@ def add_python_tasks(llm_tasks: list[LLMTask]):
             all_things = all_things + things_list
         return all_things
 
-    function_registry["join_things"] = join_things
-    join_task = PythonTask("join_things", *llm_tasks)
+    join_things_id = function_registry.register(join_things)
+    join_task = PythonTask(join_things_id, *llm_tasks)
     task_graph.add_output_task(join_task)
 
     def nested_task(_: GraphContext):
@@ -71,14 +72,15 @@ def add_python_tasks(llm_tasks: list[LLMTask]):
         nested_task_ran = True
         return "nested task ran"
 
+    nested_task_id = function_registry.register(nested_task)
+
     # Tasks can be added during execution
     def add_nested_task(context: GraphContext):
-        context.add_task(PythonTask("nested_task"))
+        context.add_task(PythonTask(nested_task_id))
         return "nested task created"
 
-    function_registry["nested_task"] = nested_task
-    function_registry["add_nested_task"] = add_nested_task
-    task_graph.add_task(PythonTask("add_nested_task"))
+    add_nested_task_id = function_registry.register(add_nested_task)
+    task_graph.add_task(PythonTask(add_nested_task_id))
 
 
 task_graph.graph_input = "famous mathematicians"
@@ -90,6 +92,7 @@ serialized = json.dumps(task_graph.to_json())
 task_graph = TaskGraph.from_json(json.loads(serialized))
 
 output: list[str] = asyncio.run(task_graph.run(function_registry))
+print(output)
 assert nested_task_ran
 # The output of the task graph is the output of its output_task
 assert len(output) == 15

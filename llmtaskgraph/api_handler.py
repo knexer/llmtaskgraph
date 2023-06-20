@@ -7,6 +7,8 @@ from tenacity import (
 
 from typing import Any, Union
 
+TextOrMessageOrMessages = Union[str, dict[str, str], list[dict[str, str]]]
+
 
 class OpenAiChatApiHandler:
     # todo: support batching
@@ -16,7 +18,7 @@ class OpenAiChatApiHandler:
     @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
     async def api_call(
         self,
-        messages: Union[str, dict[str, str], list[dict[str, str]]],
+        messages: TextOrMessageOrMessages,
         params: dict[str, Any],
     ):
         # make sure messages is a list of objects with role and content keys

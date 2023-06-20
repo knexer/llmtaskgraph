@@ -1,8 +1,10 @@
 import asyncio
-from typing import Any, Optional, Callable
+from typing import Any, Optional
 
-from .task import JSON, Task, task_from_json
-from .function_registry import make_base_function_registry
+from llmtaskgraph.types import JSON
+
+from .task import Task, task_from_json
+from .function_registry import FunctionRegistry, make_base_registry
 
 
 class TaskGraph:
@@ -13,7 +15,7 @@ class TaskGraph:
 
         # transient state during run
         self.started = False
-        self.function_registry: Optional[dict[str, Callable[..., Any]]] = None
+        self.function_registry: Optional[FunctionRegistry] = None
 
     def add_task(self, task: Task) -> str:
         for dependency in task.dependencies:
@@ -35,11 +37,10 @@ class TaskGraph:
     def make_context_for(self, task: Task):
         return GraphContext(self, task)
 
-    async def run(self, function_registry: dict[str, Callable[..., Any]]) -> Any:
+    async def run(self, function_registry: FunctionRegistry) -> Any:
         assert not self.started
         self.started = True
-        self.function_registry = function_registry.copy()
-        self.function_registry.update(make_base_function_registry())
+        self.function_registry = make_base_registry().merge(function_registry)
 
         # Start all initially available tasks.
         # N.B.: Tasks added during execution will be started by add_task.
