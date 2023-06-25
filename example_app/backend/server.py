@@ -1,7 +1,9 @@
 import asyncio
-from typing import Any, Callable
+
+from typing import NoReturn
 from websockets.server import serve, WebSocketServerProtocol
 import json
+from llmtaskgraph.function_registry import FunctionRegistry
 
 from llmtaskgraph.task_graph import TaskGraph
 
@@ -10,8 +12,8 @@ class WebSocketServer:
     def __init__(
         self,
         initial_task_graph: TaskGraph,
-        function_registry: dict[str, Callable[..., Any]],
-    ):
+        function_registry: FunctionRegistry,
+    ) -> None:
         self.initial_task_graph: TaskGraph = initial_task_graph
         self.state = "waiting"
         self.task_graph: TaskGraph = initial_task_graph
@@ -19,7 +21,7 @@ class WebSocketServer:
         self.graph_exec = None
         self.recv: asyncio.Future[str] | None = None
 
-    async def server(self, websocket: WebSocketServerProtocol):
+    async def server(self, websocket: WebSocketServerProtocol) -> NoReturn:
         print("Client connected.")
         # Send the initial task graph to the client so it can reset us to the initial state if it wants to
         await websocket.send(
@@ -47,8 +49,7 @@ class WebSocketServer:
                 self.state = "waiting"
                 await self.send_graph(websocket, self.state, self.task_graph)
 
-    async def execute_current_graph(self, websocket: WebSocketServerProtocol):
-        reveal_type(websocket)
+    async def execute_current_graph(self, websocket: WebSocketServerProtocol) -> None:
         # Start the current task graph, if it isn't already running
         if not self.graph_exec:
             self.graph_exec = asyncio.create_task(
@@ -98,17 +99,17 @@ class WebSocketServer:
 
     async def send_graph(
         self, websocket: WebSocketServerProtocol, state: str, graph: TaskGraph
-    ):
+    ) -> None:
         await websocket.send(
             json.dumps({"backend_state": state, "graph": graph.to_json()})
         )
 
-    async def get_updated_graph(self, websocket: WebSocketServerProtocol):
+    async def get_updated_graph(self, websocket: WebSocketServerProtocol) -> None:
         message_data = json.loads(await websocket.recv())
         assert message_data["command"] == "START"
         self.task_graph = TaskGraph.from_json(message_data["graph"])
 
-    def run(self, host: str = "localhost", port: int = 5678):
+    def run(self, host: str = "localhost", port: int = 5678) -> None:
         print("Starting server.")
         start_server = serve(self.server, host, port)
         asyncio.get_event_loop().run_until_complete(start_server)

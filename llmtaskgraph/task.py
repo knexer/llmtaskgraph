@@ -218,7 +218,7 @@ class TaskGraphTask(Task):
     def __init__(
         self,
         subgraph: "TaskGraph",
-        input_formatter_id: FunctionId[..., Any],
+        input_formatter_id: FunctionId[..., JSONValue],
         *deps: Task,
         **kwdeps: Task,
     ):

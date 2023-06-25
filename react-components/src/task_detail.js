@@ -57,7 +57,11 @@ export function GraphDetail({ graph, onEdit, editEnabled }) {
   return (
     <div className="task-detail">
       <header className="task-detail-header">
-        Graph Detail ({stateLabel(graph, graph.graphData.output_task)})
+        Graph Detail (
+        {graph.graphData.output_task
+          ? stateLabel(graph, graph.graphData.output_task)
+          : "No output task defined yet."}
+        )
       </header>
       <div className="task-detail-content">
         <TaskField

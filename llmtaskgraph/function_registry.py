@@ -10,7 +10,6 @@ from typing import (
     ParamSpec,
     TypeVar,
 )
-from uuid import uuid4
 
 from llmtaskgraph.types import JSON, JSONValue
 
@@ -29,38 +28,28 @@ Q = Concatenate["GraphContext", P]
 
 class FunctionId(Generic[P, T]):
     def __init__(self, func: Callable[Q[P], T] | Callable[P, Awaitable[T]]):
-        self.id: str = str(uuid4())
         self.name: str = func.__name__
         func_return_type: Any | None = inspect.get_annotations(func).get("return")
         self.func_return_type: type[T] = func_return_type if func_return_type else Any
 
     def __hash__(self):
-        return hash(self.id)
+        return hash(self.name)
 
     def __eq__(self, other: Any) -> bool:
-        return self.id == other.id
+        return self.name == other.name
 
     def __repr__(self):
         return f"FunctionId({self.name})"
 
-    def to_json(self) -> JSON:
-        return {
-            "id": self.id,
-            "name": self.name,
-        }
+    def to_json(self) -> JSONValue:
+        return self.name
 
     @classmethod
-    def from_json(cls, json: JSON | JSONValue) -> "FunctionId[..., Any]":
-        assert isinstance(json, dict)
-        function_id = cls(lambda: None)  # type: ignore
+    def from_json(cls, json: JSONValue) -> "FunctionId[..., Any]":
+        assert isinstance(json, str)
+        function_id: FunctionId[..., Any] = FunctionId(lambda: None)  # type: ignore
 
-        id_ = json["id"]
-        assert isinstance(id_, str)
-        function_id.id = id_
-
-        name = json["name"]
-        assert isinstance(name, str)
-        function_id.name = name
+        function_id.name = json
 
         return function_id
 
@@ -117,8 +106,8 @@ def _parse_json(json_str: str) -> JSON:
     return json.loads(json_str)
 
 
-def _forward_graph_input(context: "GraphContext") -> Any:
-    return context.graph_input
+def _forward_graph_input(context: "GraphContext") -> JSONValue:
+    return context.graph_input()
 
 
 _base_registry = FunctionRegistry()
@@ -127,7 +116,9 @@ openai_chat: FunctionId[
 ] = _base_registry.register_api_handler(_api_handler.api_call)
 dont_parse: FunctionId[[str], str] = _base_registry.register_no_context(_dont_parse)
 parse_json: FunctionId[[str], JSON] = _base_registry.register_no_context(_parse_json)
-forward_graph_input: FunctionId[[], Any] = _base_registry.register(_forward_graph_input)
+forward_graph_input: FunctionId[[], JSONValue] = _base_registry.register(
+    _forward_graph_input
+)
 
 
 def make_base_registry() -> FunctionRegistry:

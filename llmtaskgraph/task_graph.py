@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any, Optional
 
-from llmtaskgraph.types import JSON
+from llmtaskgraph.types import JSON, JSONValue
 
 from .task import Task, task_from_json
 from .function_registry import FunctionRegistry, make_base_registry
@@ -10,7 +10,7 @@ from .function_registry import FunctionRegistry, make_base_registry
 class TaskGraph:
     def __init__(self):
         self.tasks: list[Task] = []
-        self.graph_input: Any = None
+        self.graph_input: JSONValue = None
         self.output_task: Optional[Task] = None
 
         # transient state during run
