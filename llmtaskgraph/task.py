@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from asyncio import Future
 import inspect
 import traceback
-from typing import Any, Optional
+from typing import Optional
 from uuid import uuid4
 
 from typing import TYPE_CHECKING
@@ -23,7 +23,7 @@ class Task(ABC):
         self.kwdeps: dict[str, Task] = kwdeps
         self.created_by: Optional[Task] = None
         self.output_data: Optional[JSONValue] = None
-        self.output: Optional[Future[Any]] = None
+        self.output: Optional[Future[JSONValue]] = None
 
     @property
     def dependencies(self) -> tuple[Task, ...]:
@@ -42,8 +42,8 @@ class Task(ABC):
 
         # Collect dependency output. We know tasks are actual Tasks with output futures at this point.
         try:
-            dep_results: list[Any] = [await dep.output for dep in self.deps]  # type: ignore
-            kwdep_results: dict[str, Any] = {
+            dep_results: list[JSONValue] = [await dep.output for dep in self.deps]  # type: ignore
+            kwdep_results: dict[str, JSONValue] = {
                 kwdep_name: await kwdep.output for kwdep_name, kwdep in self.kwdeps.items()  # type: ignore
             }
         except Exception:
@@ -62,9 +62,9 @@ class Task(ABC):
         self,
         context: GraphContext,
         function_registry: FunctionRegistry,
-        *dep_results: tuple[Any],
-        **kwdep_results: dict[str, Any],
-    ):
+        *dep_results: JSONValue,
+        **kwdep_results: JSONValue,
+    ) -> JSONValue:
         pass
 
     @abstractmethod
@@ -72,7 +72,7 @@ class Task(ABC):
         def get_id(dep: Task) -> str:
             return dep.task_id
 
-        def get_exception_str(future: Optional[Future[Any]]) -> Optional[str]:
+        def get_exception_str(future: Optional[Future[JSONValue]]) -> Optional[str]:
             if future is None or not future.done():
                 return None
             e = future.exception()
@@ -118,10 +118,10 @@ class Task(ABC):
 class LLMTask(Task):
     def __init__(
         self,
-        prompt_formatter_id: FunctionId[..., Any],
-        api_handler_id: FunctionId[..., Any],
-        params: Any,
-        output_parser_id: FunctionId[..., Any],
+        prompt_formatter_id: FunctionId[..., str],
+        api_handler_id: FunctionId[..., str],
+        params: JSON,
+        output_parser_id: FunctionId[..., JSONValue],
         *deps: Task,
         **kwdeps: Task,
     ):
@@ -130,24 +130,24 @@ class LLMTask(Task):
         self.api_handler_id = api_handler_id
         self.params = params
         self.output_parser_id = output_parser_id
-        self.formatted_prompt = None
-        self.response = None
+        self.formatted_prompt: str | None = None
+        self.response: str | None = None
 
     async def execute(
         self,
         context: GraphContext,
         function_registry: FunctionRegistry,
-        *dep_results: tuple[Any],
-        **kwdep_results: dict[str, Any],
-    ):
+        *dep_results: JSONValue,
+        **kwdep_results: JSONValue,
+    ) -> JSONValue:
         if self.formatted_prompt is None:
             self.formatted_prompt = function_registry[self.prompt_formatter_id](
                 context, *dep_results, **kwdep_results
             )
         if self.response is None:
-            self.response = await function_registry[self.api_handler_id](
-                self.formatted_prompt, self.params
-            )
+            self.response = await function_registry.get_api_handler(
+                self.api_handler_id
+            )(self.formatted_prompt, self.params)
         return function_registry[self.output_parser_id](context, self.response)
 
     def to_json(self) -> JSON:
@@ -166,20 +166,28 @@ class LLMTask(Task):
 
     @classmethod
     def from_json(cls, json: JSON, tasks: dict[str, Task]) -> LLMTask:
+        params = json.pop("params")
+        assert isinstance(params, dict)
         task = cls(
             FunctionId.from_json(json.pop("prompt_formatter_id")),
             FunctionId.from_json(json.pop("api_handler_id")),
-            json.pop("params"),
+            params,
             FunctionId.from_json(json.pop("output_parser_id")),
         )
         task.init_from_json(json, tasks)
-        task.formatted_prompt = json.pop("formatted_prompt")
-        task.response = json.pop("response")
+        formatted_prompt = json.pop("formatted_prompt")
+        assert isinstance(formatted_prompt, str | None)
+        task.formatted_prompt = formatted_prompt
+        response = json.pop("response")
+        assert isinstance(response, str | None)
+        task.response = response
         return task
 
 
 class PythonTask(Task):
-    def __init__(self, callback_id: FunctionId[..., Any], *deps: Task, **kwdeps: Task):
+    def __init__(
+        self, callback_id: FunctionId[..., JSONValue], *deps: Task, **kwdeps: Task
+    ):
         super().__init__(*deps, **kwdeps)
         self.callback_id = callback_id
 
@@ -187,9 +195,9 @@ class PythonTask(Task):
         self,
         context: GraphContext,
         function_registry: FunctionRegistry,
-        *dep_results: tuple[Any],
-        **kwdep_results: dict[str, Any],
-    ):
+        *dep_results: JSONValue,
+        **kwdep_results: JSONValue,
+    ) -> JSONValue:
         callback = function_registry[self.callback_id]
         if inspect.iscoroutinefunction(callback):
             return await callback(context, *dep_results, **kwdep_results)
@@ -231,9 +239,9 @@ class TaskGraphTask(Task):
         self,
         context: GraphContext,
         function_registry: FunctionRegistry,
-        *dep_results: tuple[Any],
-        **kwdep_results: dict[str, Any],
-    ):
+        *dep_results: JSONValue,
+        **kwdep_results: JSONValue,
+    ) -> JSONValue:
         if self.graph_input is None:
             self.graph_input = function_registry[self.input_formatter_id](
                 context, *dep_results, **kwdep_results

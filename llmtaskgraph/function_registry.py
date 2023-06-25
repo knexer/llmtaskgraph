@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 _api_handler = OpenAiChatApiHandler()
 
-T = TypeVar("T")
+T = TypeVar("T", covariant=True)
 P = ParamSpec("P")
 Q = Concatenate["GraphContext", P]
 
@@ -112,7 +112,7 @@ def _forward_graph_input(context: "GraphContext") -> JSONValue:
 
 _base_registry = FunctionRegistry()
 openai_chat: FunctionId[
-    [TextOrMessageOrMessages, dict[str, Any]], str
+    [TextOrMessageOrMessages, JSON], str
 ] = _base_registry.register_api_handler(_api_handler.api_call)
 dont_parse: FunctionId[[str], str] = _base_registry.register_no_context(_dont_parse)
 parse_json: FunctionId[[str], JSON] = _base_registry.register_no_context(_parse_json)

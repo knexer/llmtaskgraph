@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Optional
+from typing import Optional
 
 from llmtaskgraph.types import JSON, JSONValue
 
@@ -10,7 +10,7 @@ from .function_registry import FunctionRegistry, make_base_registry
 class TaskGraph:
     def __init__(self):
         self.tasks: list[Task] = []
-        self.graph_input: JSONValue = None
+        self.graph_input: JSONValue | None = None
         self.output_task: Optional[Task] = None
 
         # transient state during run
@@ -37,7 +37,7 @@ class TaskGraph:
     def make_context_for(self, task: Task):
         return GraphContext(self, task)
 
-    async def run(self, function_registry: FunctionRegistry) -> Any:
+    async def run(self, function_registry: FunctionRegistry) -> JSONValue:
         assert not self.started
         self.started = True
         self.function_registry = make_base_registry().merge(function_registry)
@@ -91,11 +91,14 @@ class TaskGraph:
         }
 
     @classmethod
-    def from_json(cls, json: dict[str, Any]):
+    def from_json(cls, json: JSON) -> "TaskGraph":
         graph = TaskGraph()
         graph.tasks = []
-        for task_json in json["tasks"]:
+        json_tasks = json["tasks"]
+        assert isinstance(json_tasks, list)
+        for task_json in json_tasks:
             tasks_by_id = {task.task_id: task for task in graph.tasks}
+            assert isinstance(task_json, dict)
             task = task_from_json(task_json, tasks_by_id)
             graph.tasks.append(task)
         graph.graph_input = json["graph_input"]
