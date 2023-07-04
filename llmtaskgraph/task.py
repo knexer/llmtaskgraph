@@ -9,7 +9,12 @@ from uuid import uuid4
 from typing import TYPE_CHECKING
 
 from llmtaskgraph.function_registry import FunctionId, FunctionRegistry
-from llmtaskgraph.types import JSON, JSONValue
+from llmtaskgraph.types import (
+    JSON,
+    JSONValue,
+    Prompt,
+    PromptToJSONValue,
+)
 
 if TYPE_CHECKING:
     from .task_graph import GraphContext
@@ -118,10 +123,10 @@ class Task(ABC):
 class LLMTask(Task):
     def __init__(
         self,
-        prompt_formatter_id: FunctionId[..., str],
-        api_handler_id: FunctionId[..., str],
+        prompt_formatter_id: FunctionId[..., Prompt],
+        api_handler_id: FunctionId[[Prompt, JSON], str],
         params: JSON,
-        output_parser_id: FunctionId[..., JSONValue],
+        output_parser_id: FunctionId[[str], JSONValue],
         *deps: Task,
         **kwdeps: Task,
     ):
@@ -130,7 +135,7 @@ class LLMTask(Task):
         self.api_handler_id = api_handler_id
         self.params = params
         self.output_parser_id = output_parser_id
-        self.formatted_prompt: str | None = None
+        self.formatted_prompt: Prompt | None = None
         self.response: str | None = None
 
     async def execute(
@@ -158,7 +163,7 @@ class LLMTask(Task):
                 "api_handler_id": self.api_handler_id.to_json(),
                 "params": self.params,
                 "output_parser_id": self.output_parser_id.to_json(),
-                "formatted_prompt": self.formatted_prompt,
+                "formatted_prompt": PromptToJSONValue(self.formatted_prompt),
                 "response": self.response,
             }
         )

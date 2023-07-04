@@ -22,7 +22,7 @@ function_registry = FunctionRegistry()
 
 # LLMTasks can be used to call the OpenAI API
 def add_llm_tasks():
-    def format_prompt(context: GraphContext):
+    def format_prompt(context: GraphContext) -> str:
         return f"Give a numbered list of five {context.graph_input()}."
 
     # Parse the response

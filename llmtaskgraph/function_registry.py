@@ -11,9 +11,9 @@ from typing import (
     TypeVar,
 )
 
-from llmtaskgraph.types import JSON, JSONValue
+from llmtaskgraph.types import JSON, JSONValue, Prompt
 
-from .api_handler import OpenAiChatApiHandler, TextOrMessageOrMessages
+from .api_handler import OpenAiChatApiHandler
 
 
 if TYPE_CHECKING:
@@ -111,9 +111,9 @@ def _forward_graph_input(context: "GraphContext") -> JSONValue:
 
 
 _base_registry = FunctionRegistry()
-openai_chat: FunctionId[
-    [TextOrMessageOrMessages, JSON], str
-] = _base_registry.register_api_handler(_api_handler.api_call)
+openai_chat: FunctionId[[Prompt, JSON], str] = _base_registry.register_api_handler(
+    _api_handler.api_call
+)
 dont_parse: FunctionId[[str], str] = _base_registry.register_no_context(_dont_parse)
 parse_json: FunctionId[[str], JSON] = _base_registry.register_no_context(_parse_json)
 forward_graph_input: FunctionId[[], JSONValue] = _base_registry.register(

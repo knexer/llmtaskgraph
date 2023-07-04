@@ -5,9 +5,9 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from typing import Any, Union
+from typing import Any
 
-TextOrMessageOrMessages = Union[str, dict[str, str], list[dict[str, str]]]
+from llmtaskgraph.types import Prompt, JSON
 
 
 class OpenAiChatApiHandler:
@@ -18,18 +18,18 @@ class OpenAiChatApiHandler:
     @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
     async def api_call(
         self,
-        messages: TextOrMessageOrMessages,
-        params: dict[str, Any],
-    ):
+        prompt: Prompt,
+        params: JSON,
+    ) -> str:
         # make sure messages is a list of objects with role and content keys
-        if not isinstance(messages, list):
-            if isinstance(messages, str):
-                messages = {"role": "user", "content": messages}
-            messages = [messages]
+        if not isinstance(prompt, list):
+            if isinstance(prompt, str):
+                prompt = {"role": "user", "content": prompt}
+            prompt = [prompt]
 
         # Todo: handle api calls elsewhere for request batching and retries
         response: Any = await openai.ChatCompletion.acreate(  # type: ignore
-            messages=messages,
+            messages=prompt,
             **params,
         )
         # Todo: handle n > 1
